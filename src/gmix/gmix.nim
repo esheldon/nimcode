@@ -176,19 +176,20 @@ proc fillGMixSimple(self: var GMix,
                      T_i_2*(1.0+e1))
 
 proc newGMixSimple(pars: GMixSimplePars) : GMix =
+  ## make a new simple model gaussian mixture
   result=newGMix(6)
   case pars.model:
     of GMixSimpleModel.gauss:
-      fillGMixSimple(result, pars, fvals_gauss, pvals_gauss)
+        fillGMixSimple(result, pars, fvals_gauss, pvals_gauss)
 
     of GMixSimpleModel.exp:
-      fillGMixSimple(result, pars, fvals_exp, pvals_exp)
+        fillGMixSimple(result, pars, fvals_exp, pvals_exp)
 
     of GMixSimpleModel.dev:
-      fillGMixSimple(result, pars, fvals_dev, pvals_dev)
+        fillGMixSimple(result, pars, fvals_dev, pvals_dev)
 
     of GMixSimpleModel.turb:
-      fillGMixSimple(result, pars, fvals_turb, pvals_turb)
+        fillGMixSimple(result, pars, fvals_turb, pvals_turb)
 
 #proc newGMixCoellip(pars: GMixPars, num: int) : GMix =
 #    newSeq(result, num) 
