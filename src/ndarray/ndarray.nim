@@ -85,39 +85,31 @@ template `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
 
 proc `$`*[T](self: NDArray[T]): string =
 
-    #[
     if self.ndim==2:
         var lines = newSeq[string]()
 
-        stdout.write("[")
-
         for i in 0..self.dims[0]-1:
-            var line: string
+            var line = newSeq[string]()
 
-            if i==0:
-                line.add("[[")
-            else:
-                line.add(" [")
 
             for j in 0..self.dims[1]-1:
-
                 line.add( $self[i,j] )
 
-                if j < self.dims[1]-1:
-                    line.add(", ")
+            var tmp = line.join(", ")
 
-            if i < self.dims[0]-1:
-                line.add("]")
+            if i==0:
+                tmp = "[" & tmp
+            elif i==self.dims[0]-1:
+                tmp = " " & tmp & "]"
             else:
-                line.add("]]")
+                tmp = " " & tmp
 
-            lines.add(line)
+            lines.add(tmp)
 
-            result = lines.join("\n")
+        result = lines.join("\n")
     else:
         result = $self.data
-    ]#
-    result = $self.data
+    #result = $self.data
 
 
 # general version
@@ -133,14 +125,16 @@ when isMainModule:
 
     var arr = newArray[float](3,4)
 
+    for i in 0..arr.dims[0]-1:
+        for j in 0..arr.dims[1]-1:
+            echo(arr[i,j])
     echo("arr:")
     echo(arr)
-    #[
 
     var rng = range[float](3,4)
     echo("rng:")
     echo(rng)
     echo("rng[1,1]: ",rng[1,1])
+    echo("rng[1,2]: ",rng[1,2])
 
     echo("rng[1]: ",rng[1])
-    ]#
