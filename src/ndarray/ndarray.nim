@@ -6,13 +6,15 @@ import strutils
 
 type
     NDArray*[T] = object
+
         dims: seq[int]
-        ndim:int
+        size: int          # size is product of all elements of dims
+        ndim:int           # for convenience
 
-        strides: seq[int]
+        strides: seq[int]  # how many elements are jumped to get 
+                           # to the next in each dimension
 
-        data: seq[T]
-        size: int
+        data: seq[T]       # use 1-D sequence as backing
 
 
 proc newArray*[T](self: var NDArray[T], dims: varargs[int]) =
@@ -42,7 +44,6 @@ proc newArray*[T](self: var NDArray[T], dims: varargs[int]) =
 proc newArray*[T](dims: varargs[int]): NDArray[T] =
     newArray(result, dims)
 
-
 proc ones*[T](dims: varargs[int]): NDArray[T] =
     newArray[T](result,dims)
 
@@ -54,6 +55,21 @@ proc range*[T](dims: varargs[int]): NDArray[T] =
 
     for i in 0..result.size-1:
         result.data[i] = T(i)
+
+proc ravel*[T](orig: NDArray[T]): NDArray[T] =
+    ## get a flattened version of the array, sharing the
+    ## underlying data
+
+    result.ndim=1
+    result.size=orig.size
+
+    newSeq(result.dims, 1)
+    result.dims[0] = orig.size
+
+    newSeq(result.strides, 1)
+    result.strides[0] = 1
+
+    shallowCopy(result.data, orig.data)
 
 
 # we can generalize these with strides later
@@ -121,6 +137,25 @@ template `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
 
     self.data[index]
 
+proc `[]=`*[T](self: var NDArray[T], indices: varargs[int], val: T): auto =
+    ## general element set
+    ##
+    ## might be slower than the specific ones above but
+    ## I haven't actually timed it
+
+    let ndim=self.ndim
+    let nind=len(indices)
+
+    if ndim != nind:
+        let mess="tried to index $1 dimensional array with $2 indices" % [$ndim, $nind]
+        raise newException(IndexError, mess)
+
+    var index=0
+    for i in 0..ndim-1:
+        index += self.strides[i]*indices[i]
+
+    self.data[index] = val
+
 
 proc `$`*[T](self: NDArray[T]): string =
 
@@ -134,7 +169,7 @@ proc `$`*[T](self: NDArray[T]): string =
             for j in 0..self.dims[1]-1:
                 line.add( $self[i,j] )
 
-            var tmp = line.join(", ")
+            var tmp = "[" & line.join(", ") & "]"
 
             if i==0:
                 tmp = "[" & tmp
@@ -161,6 +196,17 @@ when isMainModule:
     var oa=ones[float](3,3)
     echo("ones:")
     echo(oa)
+
+    # this shares the underlying data with oa
+    var oaravel = oa.ravel()
+
+    # verify data is shared
+    echo("modifing oa and oaravel")
+    oa[1,1]=9999.0
+    echo(oa)
+    echo(oaravel)
+    if oa[1,1] != oaravel[4]:
+        raise newException(ValueError,"did not match")
 
     var rng = range[float](3,4)
     echo("rng:")
