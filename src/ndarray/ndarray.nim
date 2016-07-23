@@ -17,8 +17,11 @@ type
         data: seq[T]       # use 1-D sequence as backing
 
 
-proc newArray*[T](self: var NDArray[T], dims: varargs[int]) =
-    ## return a new array
+proc init*[T](self: var NDArray[T], dims: varargs[int]) =
+    ## initialize the array to zeros.
+    ##
+    ## If data is already present, re-initialize
+
     let ndim = len(dims)
 
     newSeq(self.dims, ndim)
@@ -42,16 +45,19 @@ proc newArray*[T](self: var NDArray[T], dims: varargs[int]) =
 
 
 proc newArray*[T](dims: varargs[int]): NDArray[T] =
-    newArray(result, dims)
+    result.init(dims)
+
+proc zeros*[T](dims: varargs[int]): NDArray[T] =
+    result.init(dims)
 
 proc ones*[T](dims: varargs[int]): NDArray[T] =
-    newArray[T](result,dims)
+    result.init(dims)
 
     for i in 0..<result.size:
         result.data[i] = T(1)
 
 proc range*[T](dims: varargs[int]): NDArray[T] =
-    newArray[T](result, dims)
+    result.init(dims)
 
     for i in 0..result.size-1:
         result.data[i] = T(i)
@@ -72,7 +78,7 @@ proc ravel*[T](orig: NDArray[T]): NDArray[T] =
     shallowCopy(result.data, orig.data)
 
 
-# we can generalize these with strides later
+# specific dimensions
 template `[]`*[T](self: NDArray[T], i: int): auto =
     let ndim=self.ndim
 
