@@ -3,7 +3,7 @@
 #    - add sum(), prod(), cumsum()
 #    - ufuncs for math functions
 #         - do all in math module if possible
-#         - some like pow, ^, mod, tan2, arctan2, fmod are special
+#         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
 #    - type conversion
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
@@ -380,6 +380,7 @@ makeUFunc(ln)
 makeUFunc(log10)
 makeUFunc(log2)
 makeUFunc(sqrt)
+makeUFunc(cbrt)
 
 makeUFunc(sin)
 makeUFunc(cos)
