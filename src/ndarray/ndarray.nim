@@ -13,11 +13,11 @@ import strutils
 type
     NDArray*[T] = object
 
-        size: Natural          # size is product of all elements of dims
-        dims: seq[Natural]     # array holding the size of each dimension
-        ndim: Natural
+        size: int              # size is product of all elements of dims
+        dims: seq[int]         # array holding the size of each dimension
+        ndim: int
 
-        strides: seq[Natural]  # how many elements are jumped to get 
+        strides: seq[int]      # how many elements are jumped to get 
                                # to the next in each dimension
 
         data: seq[T]           # use 1-D sequence as backing
@@ -175,10 +175,12 @@ proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2): auto =
     self.data[index] = T(val)
 
 #
-# array operations
+#
+# scalar array operations
+#
 #
 
-# scalars
+# in place operators
 
 proc `.=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     ## add a scalar to the array inplace
@@ -216,7 +218,48 @@ proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     for i in 0..self.size-1:
         self.data[i] /= tval
 
+# These make new arrays
+proc `+`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+    result = self
+    result += val
+
+proc `+`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+    result = self
+    result += val
+
+proc `-`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+    result = self
+    result -= val
+
+proc `-`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+    result = self
+    result -= val
+
+proc `*`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+    result = self
+    result *= val
+
+proc `*`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+    result = self
+    result *= val
+
+proc `/`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+    result = self
+    result /= val
+
+proc `/`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+    result = self
+    result /= val
+
+
+#template `+`*[T2,T](val: T2, self: var NDArray[T]): expr = self*val 
+
+#
+#
 # operations using other arrays
+#
+#
+
 proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
     if other.ndim != self.ndim:
@@ -279,19 +322,19 @@ proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
 # accessors
 #
 
-proc size*[T](self: NDArray[T]): Natural =
+proc size*[T](self: NDArray[T]): int =
     ## Get a copy of the array size
     result=self.size
 
-proc dims*[T](self: NDArray[T]): seq[Natural] =
+proc dims*[T](self: NDArray[T]): seq[int] =
     ## Get a copy of the array dimensions
     result=self.dims
 
-proc ndim*[T](self: NDArray[T]): Natural =
+proc ndim*[T](self: NDArray[T]): int =
     ## Get a copy of the number of dimensions
     result=self.ndim
 
-proc strides*[T](self: NDArray[T]): seq[Natural] =
+proc strides*[T](self: NDArray[T]): seq[int] =
     ## Get a copy of the strides array
     result=self.strides
 
