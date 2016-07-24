@@ -1,4 +1,10 @@
 # TODO:  many things, but first
+#    - ops creating new arrays
+#        - note can use template for reverse of scalar ones, e.g. do the
+#          proc for array*x and then template for x*array
+#        - +, - (both prefix and infix)
+#        - *, /
+#    - add slicing
 #    - add ordering, e.g. row major vs col major
 
 import sequtils
@@ -7,14 +13,14 @@ import strutils
 type
     NDArray*[T] = object
 
-        dims: seq[int]
-        size: int          # size is product of all elements of dims
-        ndim:int           # for convenience
+        size: Natural          # size is product of all elements of dims
+        dims: seq[Natural]     # array holding the size of each dimension
+        ndim: Natural
 
-        strides: seq[int]  # how many elements are jumped to get 
-                           # to the next in each dimension
+        strides: seq[Natural]  # how many elements are jumped to get 
+                               # to the next in each dimension
 
-        data: seq[T]       # use 1-D sequence as backing
+        data: seq[T]           # use 1-D sequence as backing
 
 
 proc init*[T](self: var NDArray[T], dims: varargs[int]) =
@@ -47,6 +53,9 @@ proc init*[T](self: var NDArray[T], dims: varargs[int]) =
 proc newArray*[T](dims: varargs[int]): NDArray[T] =
     result.init(dims)
 
+proc zeros*(dims: varargs[int]): NDArray[float] =
+    result.init(dims)
+
 proc zeros*[T](dims: varargs[int]): NDArray[T] =
     result.init(dims)
 
@@ -56,7 +65,7 @@ proc ones*[T](dims: varargs[int]): NDArray[T] =
     for i in 0..<result.size:
         result.data[i] = T(1)
 
-proc range*[T](dims: varargs[int]): NDArray[T] =
+proc arange*[T](dims: varargs[int]): NDArray[T] =
     result.init(dims)
 
     for i in 0..result.size-1:
@@ -77,6 +86,10 @@ proc ravel*[T](orig: NDArray[T]): NDArray[T] =
 
     shallowCopy(result.data, orig.data)
 
+
+#
+# getters
+#
 
 # specific dimensions
 template `[]`*[T](self: NDArray[T], i: int): auto =
@@ -143,11 +156,10 @@ template `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
 
     self.data[index]
 
-proc `[]=`*[T](self: var NDArray[T], indices: varargs[int], val: T): auto =
+proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2): auto =
     ## general element set
     ##
-    ## might be slower than the specific ones above but
-    ## I haven't actually timed it
+    ## The value must be convertible to the type of the array
 
     let ndim=self.ndim
     let nind=len(indices)
@@ -160,7 +172,131 @@ proc `[]=`*[T](self: var NDArray[T], indices: varargs[int], val: T): auto =
     for i in 0..ndim-1:
         index += self.strides[i]*indices[i]
 
-    self.data[index] = val
+    self.data[index] = T(val)
+
+#
+# array operations
+#
+
+# scalars
+
+proc `.=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
+    ## add a scalar to the array inplace
+    let tval = T(val)
+
+    for i in 0..self.size-1:
+        self.data[i] = tval
+
+
+proc `+=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
+    ## add a scalar to the array inplace
+    let tval = T(val)
+
+    for i in 0..self.size-1:
+        self.data[i] += tval
+
+proc `-=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
+    ## subtract a scalar from the array inplace
+    let tval = T(val)
+
+    for i in 0..self.size-1:
+        self.data[i] -= tval
+
+proc `*=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
+    ## multiply the array by a scalar inplace
+    let tval = T(val)
+
+    for i in 0..self.size-1:
+        self.data[i] *= tval
+
+proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
+    ## divide the array by a scalar inplace
+    let tval = T(val)
+
+    for i in 0..self.size-1:
+        self.data[i] /= tval
+
+# operations using other arrays
+proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+
+    if other.ndim != self.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..self.ndim-1:
+        if other.dims[i] != self.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
+            raise newException(ValueError, mess)
+
+    for i in 0..self.size-1:
+        self.data[i] += other.data[i]
+
+proc `-=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+
+    if other.ndim != self.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..self.ndim-1:
+        if other.dims[i] != self.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
+            raise newException(ValueError, mess)
+
+    for i in 0..self.size-1:
+        self.data[i] -= other.data[i]
+
+proc `*=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+
+    if other.ndim != self.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..self.ndim-1:
+        if other.dims[i] != self.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
+            raise newException(ValueError, mess)
+
+    for i in 0..self.size-1:
+        self.data[i] *= other.data[i]
+
+proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+
+    if other.ndim != self.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..self.ndim-1:
+        if other.dims[i] != self.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
+            raise newException(ValueError, mess)
+
+    for i in 0..self.size-1:
+        self.data[i] /= other.data[i]
+
+
+
+#
+# accessors
+#
+
+proc size*[T](self: NDArray[T]): Natural =
+    ## Get a copy of the array size
+    result=self.size
+
+proc dims*[T](self: NDArray[T]): seq[Natural] =
+    ## Get a copy of the array dimensions
+    result=self.dims
+
+proc ndim*[T](self: NDArray[T]): Natural =
+    ## Get a copy of the number of dimensions
+    result=self.ndim
+
+proc strides*[T](self: NDArray[T]): seq[Natural] =
+    ## Get a copy of the strides array
+    result=self.strides
+
+
+
 
 
 proc `$`*[T](self: NDArray[T]): string =
@@ -190,42 +326,4 @@ proc `$`*[T](self: NDArray[T]): string =
     else:
         result = $self.data
     #result = $self.data
-
-
-when isMainModule:
-
-    var arr = newArray[float](3,4)
-
-    echo("arr:")
-    echo(arr)
-
-    var oa=ones[float](3,3)
-    echo("ones:")
-    echo(oa)
-
-    # this shares the underlying data with oa
-    var oaravel = oa.ravel()
-
-    # verify data is shared
-    echo("modifing oa and oaravel")
-    oa[1,1]=9999.0
-    echo(oa)
-    echo(oaravel)
-    if oa[1,1] != oaravel[4]:
-        raise newException(ValueError,"did not match")
-
-    var rng = range[float](3,4)
-    echo("rng:")
-    echo(rng)
-    echo("rng[1,1]: ",rng[1,1])
-    echo("rng[1,2]: ",rng[1,2])
-
-    var arr4 = range[float](3,4,5,6)
-    echo("arr4 strides:",arr4.strides)
-    echo("arr4[2,1,3,4]: ",arr4[2,1,3,4])
-
-    var arr5 = range[float](3,4,5,6,7)
-    echo("arr5 strides:",arr5.strides)
-    echo("arr5[2,1,3,4,2]: ",arr5[2,1,3,4,2])
-
 
