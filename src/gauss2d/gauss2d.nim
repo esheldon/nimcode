@@ -1,9 +1,20 @@
 import math
 import strutils
 
-# tuple here is implemented as a struct, a value type
+# object here is implemented as a struct the fields are not accessible outside
+# this module, but we can add read-only accessors as procs if we want
+
 type
-    Gauss2D* = tuple
+    Gauss2DPars* = tuple
+        p: float
+        row: float
+        col: float
+        irr: float
+        irc: float
+        icc: float
+
+type
+    Gauss2D* = object
         p: float
         row: float
         col: float
@@ -21,11 +32,12 @@ type
         pnorm: float
 
 
-proc init*(self: var Gauss2D, p, row, col, irr, irc, icc: float) {.raises: [RangeError].} =
-
+# can also raise ValueError due to the string interpolation below
+proc init*(self: var Gauss2D, p, row, col, irr, irc, icc: float) {.raises: [RangeError,ValueError].} =
+    ## initialize a Gauss2D
     self.det = irr*icc - irc*irc
     if self.det <= 0:
-        raise newException(RangeError, "found det <= 0")
+        raise newException(RangeError, "found det = $1, <= 0" % $self.det)
 
     self.p   = p
     self.row = row
@@ -40,6 +52,11 @@ proc init*(self: var Gauss2D, p, row, col, irr, irc, icc: float) {.raises: [Rang
     self.norm = 1.0/(2*PI*sqrt(self.det))
 
     self.pnorm = p*self.norm
+
+proc init*(self: var Gauss2D, pars: Gauss2DPars) {.inline.} =
+    ## initialize a Gauss2D with the given set of parameters
+    ## it seems this is not being inlined by nim
+    self.init(pars.p, pars.row, pars.col, pars.irr, pars.irc, pars.icc)
 
 proc show*(self: Gauss2D) =
     echo("  p:   ",self.p)
