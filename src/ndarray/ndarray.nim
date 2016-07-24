@@ -1,9 +1,5 @@
 # TODO:  many things, but first
-#    - ops creating new arrays
-#        - note can use template for reverse of scalar ones, e.g. do the
-#          proc for array*x and then template for x*array
-#        - +, - (both prefix and infix)
-#        - *, /
+#    - type conversion
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
 
@@ -219,35 +215,35 @@ proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
         self.data[i] /= tval
 
 # These make new arrays
-proc `+`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+proc `+`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
     result = self
     result += val
 
-proc `+`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+proc `+`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
     result = self
     result += val
 
-proc `-`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+proc `-`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
     result = self
     result -= val
 
-proc `-`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+proc `-`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
     result = self
     result -= val
 
-proc `*`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+proc `*`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
     result = self
     result *= val
 
-proc `*`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+proc `*`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
     result = self
     result *= val
 
-proc `/`*[T,T2](self: var NDArray[T], val: T2): NDArray[T] {.inline.} =
+proc `/`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
     result = self
     result /= val
 
-proc `/`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
+proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
     result = self
     result /= val
 
@@ -259,6 +255,8 @@ proc `/`*[T,T2](val: T2, self: var NDArray[T]): NDArray[T] {.inline.} =
 # operations using other arrays
 #
 #
+
+# in place operations
 
 proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
@@ -315,6 +313,31 @@ proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
 
     for i in 0..self.size-1:
         self.data[i] /= other.data[i]
+
+
+# making new arrays
+#
+# currently demand the arrays are of the same type until
+# we can implement promotions restrictions
+# otherwise, there is no clear way to choose the output type
+# other than by order in the expression
+
+
+proc `+`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    result = first
+    result += second
+
+proc `-`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    result = first
+    result -= second
+
+proc `*`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    result = first
+    result *= second
+
+proc `/`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    result = first
+    result /= second
 
 
 

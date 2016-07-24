@@ -46,11 +46,19 @@ when isMainModule:
     echo(oacopy)
 
     echo("\nmaking new array, adding 3 second:")
-    var adda_second = oa + 3
+    let adda_second = oa + 3
     echo(adda_second)
     echo("making new array, adding 8 first :")
-    var adda_first = 8 + oa
+    let adda_first = 8 + oa
     echo(adda_first)
+
+
+    echo("\nmaking new array adding a second array")
+    let arr_start = ones[float](3,3)
+    let arr_sec  = ones[float](3,3)
+    let arr_add = arr_start + arr_sec
+    echo(arr_add)
+
 
     # this shares the underlying data with oa
     echo("\nravelled array:")
