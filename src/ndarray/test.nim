@@ -5,10 +5,6 @@ when isMainModule:
     var arr = zeros[float](3,4)
     arr[1,2]=3.1
 
-    var ii = newSeq[int](1)
-    ii[0] = 3
-    arr[1,2] = ii[0]
-
     echo("arr len:  ",arr.len)
     echo("arr ndim: ",arr.ndim)
     echo("arr dims: ",arr.dims)
