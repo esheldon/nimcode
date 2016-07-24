@@ -197,12 +197,6 @@ proc newGMixSimple(pars: GMixSimplePars) : GMix =
 #proc newGMixCoellip(pars: GMixPars, num: int) : GMix =
 #    newSeq(result, num) 
 
-iterator mitems(self: var GMix): var Gauss2D =
-    ##
-    var i = 0
-    while i < self.len:
-        yield self[i]
-        inc i
 
 when isMainModule:
 

@@ -1,10 +1,10 @@
 # TODO:  many things, but first
-#    - use len instead of size for consistency
-#    - add sum(), prod(), cumsum()
+#    - add prod(), cumsum()
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
 #    - type conversion
+#    - reduction over specific dimensions
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
 
@@ -24,12 +24,23 @@ type
 
         data: seq[T]           # use 1-D sequence as backing
 
+proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
+    if a1.ndim != a2.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$a2.ndim,$a1.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..a2.ndim-1:
+        if a1.dims[i] != a2.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$a2.dims,$a1.dims]
+            raise newException(ValueError, mess)
+
+
 #
 # read-only field getters
 #
 
-proc size*[T](self: NDArray[T]): int =
-    ## Get a copy of the array size
+proc len*[T](self: NDArray[T]): int =
+    ## Get a copy of the array total size over all dimensions
     result=self.size
 
 proc dims*[T](self: NDArray[T]): seq[int] =
@@ -109,6 +120,53 @@ proc ravel*[T](orig: NDArray[T]): NDArray[T] =
     result.strides[0] = 1
 
     shallowCopy(result.data, orig.data)
+
+#
+# reduction over elements
+#
+
+proc sum*[T](self: NDArray[T]): T {.inline.} =
+    ## sum over elements in the array
+    self.data.sum()
+
+proc cumsum*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
+
+    ensure_compatible_dims(self, output)
+
+    var cs: T = 0
+
+    for i in 0..self.len-1:
+        cs += self.data[i]
+        output.data[i] = cs
+
+proc cumsum*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+    ## cumulative sum over elements in the array
+    result.init(self.dims)
+    cumsum(self, result)
+
+proc prod*[T](self: NDArray[T]): T =
+    ## product over elements in the array
+
+    result=1
+    for i in 0..self.len-1:
+        result *= self.data[i]
+
+proc cumprod*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
+    ## cumulative product over elements in the array
+
+    ensure_compatible_dims(self, output)
+
+    var ps : T = 1.0
+
+    for i in 0..self.len-1:
+        ps *= self.data[i]
+        output.data[i] = ps
+
+proc cumprod*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+    ## cumulative product over elements in the array
+    result.init(self.dims)
+    cumprod(self, result)
+
 
 
 #
@@ -283,16 +341,6 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 # operations using other arrays
 #
 #
-
-proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
-    if a1.ndim != a2.ndim:
-        let mess="mismatched number of dimensions for +=: $1 != $2" % [$a2.ndim,$a1.ndim]
-        raise newException(ValueError, mess)
-
-    for i in 0..a2.ndim-1:
-        if a1.dims[i] != a2.dims[i]:
-            let mess="mismatched dimensions for +=: $1 != $2" % [$a2.dims,$a1.dims]
-            raise newException(ValueError, mess)
 
 # in place operations
 

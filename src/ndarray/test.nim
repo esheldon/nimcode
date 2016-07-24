@@ -9,7 +9,7 @@ when isMainModule:
     ii[0] = 3
     arr[1,2] = ii[0]
 
-    echo("arr size: ",arr.size)
+    echo("arr len:  ",arr.len)
     echo("arr ndim: ",arr.ndim)
     echo("arr dims: ",arr.dims)
     echo("arr strides: ",arr.strides)
@@ -30,8 +30,9 @@ when isMainModule:
     echo("\nones:")
     echo(oa)
 
+
     let expones = exp(oa)
-    echo("exp(oa):")
+    echo("\nexp(oa):")
     echo(expones)
 
     var lnones = expones
@@ -98,6 +99,16 @@ when isMainModule:
     echo(rng)
     echo("rng[1,1]: ",rng[1,1])
     echo("rng[1,2]: ",rng[1,2])
+
+    echo("\nadding one for sums")
+    rng += 1
+    echo("sum over rng:   ",rng.sum())
+    echo("cumsum over rng:  ",rng.cumsum())
+
+    echo("prod over rng:    ",rng.prod())
+    echo("cumprod over rng: ",rng.cumprod())
+
+
 
 
     var arr4 = arange[float](3,4,5,6)
