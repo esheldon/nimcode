@@ -34,8 +34,9 @@ when isMainModule:
     echo("exp(oa):")
     echo(expones)
 
-    let lnones = ln(oa)
-    echo("ln(oa):")
+    var lnones = expones
+    ln(oa, lnones)
+    echo("in place ln(oa):")
     echo(lnones)
 
 
