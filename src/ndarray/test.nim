@@ -30,9 +30,19 @@ when isMainModule:
     echo("\nones:")
     echo(oa)
 
+    let expones = exp(oa)
+    echo("exp(oa):")
+    echo(expones)
+
+    let lnones = ln(oa)
+    echo("ln(oa):")
+    echo(lnones)
+
+
     echo("setting to 25:")
     oa .= 25
     echo(oa)
+
 
     # make a copy with these values
     let oacopy = oa

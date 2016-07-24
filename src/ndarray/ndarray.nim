@@ -1,10 +1,16 @@
 # TODO:  many things, but first
+#    - use len instead of size for consistency
+#    - add sum(), prod(), cumsum()
+#    - ufuncs for math functions
+#         - do all in math module if possible
+#         - some like pow, ^, mod, tan2, arctan2, fmod are special
 #    - type conversion
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
 
 import sequtils
 import strutils
+import math
 
 type
     NDArray*[T] = object
@@ -17,6 +23,28 @@ type
                                # to the next in each dimension
 
         data: seq[T]           # use 1-D sequence as backing
+
+#
+# read-only field getters
+#
+
+proc size*[T](self: NDArray[T]): int =
+    ## Get a copy of the array size
+    result=self.size
+
+proc dims*[T](self: NDArray[T]): seq[int] =
+    ## Get a copy of the array dimensions
+    result=self.dims
+
+proc ndim*[T](self: NDArray[T]): int =
+    ## Get a copy of the number of dimensions
+    result=self.ndim
+
+proc strides*[T](self: NDArray[T]): seq[int] =
+    ## Get a copy of the strides array
+    result=self.strides
+
+
 
 
 proc init*[T](self: var NDArray[T], dims: varargs[int]) =
@@ -256,60 +284,42 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 #
 #
 
+proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
+    if a1.ndim != a2.ndim:
+        let mess="mismatched number of dimensions for +=: $1 != $2" % [$a2.ndim,$a1.ndim]
+        raise newException(ValueError, mess)
+
+    for i in 0..a2.ndim-1:
+        if a1.dims[i] != a2.dims[i]:
+            let mess="mismatched dimensions for +=: $1 != $2" % [$a2.dims,$a1.dims]
+            raise newException(ValueError, mess)
+
 # in place operations
 
 proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
-    if other.ndim != self.ndim:
-        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
-        raise newException(ValueError, mess)
-
-    for i in 0..self.ndim-1:
-        if other.dims[i] != self.dims[i]:
-            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
-            raise newException(ValueError, mess)
+    ensure_compatible_dims(self, other)
 
     for i in 0..self.size-1:
         self.data[i] += other.data[i]
 
 proc `-=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
-    if other.ndim != self.ndim:
-        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
-        raise newException(ValueError, mess)
-
-    for i in 0..self.ndim-1:
-        if other.dims[i] != self.dims[i]:
-            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
-            raise newException(ValueError, mess)
+    ensure_compatible_dims(self, other)
 
     for i in 0..self.size-1:
         self.data[i] -= other.data[i]
 
 proc `*=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
-    if other.ndim != self.ndim:
-        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
-        raise newException(ValueError, mess)
-
-    for i in 0..self.ndim-1:
-        if other.dims[i] != self.dims[i]:
-            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
-            raise newException(ValueError, mess)
+    ensure_compatible_dims(self, other)
 
     for i in 0..self.size-1:
         self.data[i] *= other.data[i]
 
 proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
 
-    if other.ndim != self.ndim:
-        let mess="mismatched number of dimensions for +=: $1 != $2" % [$self.ndim,$other.ndim]
-        raise newException(ValueError, mess)
-
-    for i in 0..self.ndim-1:
-        if other.dims[i] != self.dims[i]:
-            let mess="mismatched dimensions for +=: $1 != $2" % [$self.dims,$other.dims]
-            raise newException(ValueError, mess)
+    ensure_compatible_dims(self, other)
 
     for i in 0..self.size-1:
         self.data[i] /= other.data[i]
@@ -342,26 +352,68 @@ proc `/`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
 
 
 #
-# accessors
+#
+# Inspired by https://github.com/unicredit/linear-algebra/blob/master/private/ufunc.nim
+# make universal functions apply to an array
+#
 #
 
-proc size*[T](self: NDArray[T]): int =
-    ## Get a copy of the array size
-    result=self.size
+# single argument
+template makeUFunc*(fname: expr) =
+    # creating a new array
+    proc fname*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+        result.init(self.dims)
 
-proc dims*[T](self: NDArray[T]): seq[int] =
-    ## Get a copy of the array dimensions
-    result=self.dims
+        for i in 0..self.size-1:
+            result.data[i] = fname(self.data[i])
 
-proc ndim*[T](self: NDArray[T]): int =
-    ## Get a copy of the number of dimensions
-    result=self.ndim
+    # copying into an existing array
+    proc fname*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
 
-proc strides*[T](self: NDArray[T]): seq[int] =
-    ## Get a copy of the strides array
-    result=self.strides
+        ensure_compatible_dims(self, output)
+
+        for i in 0..self.size-1:
+            output.data[i] = fname(self.data[i])
+
+makeUFunc(exp)
+makeUFunc(ln)
+makeUFunc(log10)
+makeUFunc(log2)
+makeUFunc(sqrt)
+
+makeUFunc(sin)
+makeUFunc(cos)
+makeUFunc(sinh)
+makeUFunc(cosh)
+
+makeUFunc(tan)
+makeUFunc(tanh)
+
+makeUFunc(arccos)
+makeUFunc(arcsin)
+makeUFunc(arctan)
+
+makeUFunc(erf)
+makeUFunc(erfc)
+
+makeUFunc(lgamma)
+makeUFunc(tgamma)
+
+makeUFunc(trunc)
+makeUFunc(floor)
+makeUFunc(ceil)
+makeUFunc(round)
+
+makeUFunc(deg2rad)
+makeUFunc(rad2deg)
 
 
+#makeUFunc[float](exp)
+#proc exp*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+#    result.init(self.dims)
+#
+#    for i in 0..self.size-1:
+#        result.data[i] = exp(self.data[i])
 
 
 
