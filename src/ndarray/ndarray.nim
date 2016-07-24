@@ -1,5 +1,4 @@
 # TODO:  many things, but first
-#    - add prod(), cumsum()
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
