@@ -129,7 +129,9 @@ proc sum*[T](self: NDArray[T]): T {.inline.} =
     self.data.sum()
 
 proc cumsum*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
-
+    ## cumulative sum over all elements
+    ##
+    ## returns a new array of the same type and length
     ensure_compatible_dims(self, output)
 
     var cs: T = 0
