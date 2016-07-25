@@ -85,21 +85,22 @@ proc init*[T](self: var NDArray[T], dims: varargs[int]) =
 
 
 proc newArray*[T](dims: varargs[int]): NDArray[T] =
-    result.init(dims)
-
-proc zeros*(dims: varargs[int]): NDArray[float] =
+    ## Get a new array filled with zeros
     result.init(dims)
 
 proc zeros*[T](dims: varargs[int]): NDArray[T] =
+    ## get a new array filled with zeros.
     result.init(dims)
 
 proc ones*[T](dims: varargs[int]): NDArray[T] =
+    ## get a new array filled with ones
     result.init(dims)
 
     for i in 0..<result.size:
         result.data[i] = T(1)
 
 proc arange*[T](dims: varargs[int]): NDArray[T] =
+    ## get a new array filled with values from 0 to the number of elements
     result.init(dims)
 
     for i in 0..result.size-1:
@@ -266,7 +267,7 @@ proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2): auto =
 # in place operators
 
 proc `.=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
-    ## add a scalar to the array inplace
+    ## set all elements of an array equal to the input scalar
     let tval = T(val)
 
     for i in 0..self.size-1:
@@ -303,39 +304,44 @@ proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
 
 # These make new arrays
 proc `+`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
+    ## get arr + constant
     result = self
     result += val
 
 proc `+`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
+    ## get constant + arr
     result = self
     result += val
 
 proc `-`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
+    ## get arr - constant
     result = self
     result -= val
 
 proc `-`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
+    ## get constant - arr
     result = self
     result -= val
 
 proc `*`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
+    ## get arr * constant
     result = self
     result *= val
 
 proc `*`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
+    ## get constant * arr
     result = self
     result *= val
 
 proc `/`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
+    ## get arr / constant
     result = self
     result /= val
 
 proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
+    ## get constant / arr
     result = self
     result /= val
-
-
-#template `+`*[T2,T](val: T2, self: var NDArray[T]): expr = self*val 
 
 #
 #
@@ -346,13 +352,14 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 # in place operations
 
 proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
-
+    ## add an array in place
     ensure_compatible_dims(self, other)
 
     for i in 0..self.size-1:
         self.data[i] += other.data[i]
 
 proc `-=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+    ## subtract an array in place
 
     ensure_compatible_dims(self, other)
 
@@ -360,6 +367,7 @@ proc `-=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
         self.data[i] -= other.data[i]
 
 proc `*=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+    ## multiply an array in place
 
     ensure_compatible_dims(self, other)
 
@@ -367,6 +375,7 @@ proc `*=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
         self.data[i] *= other.data[i]
 
 proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
+    ## divide an array in place
 
     ensure_compatible_dims(self, other)
 
@@ -383,22 +392,24 @@ proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
 
 
 proc `+`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    ## add two arrays to get a new array
     result = first
     result += second
 
 proc `-`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    ## subtract two arrays to get a new array
     result = first
     result -= second
 
 proc `*`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    ## multiply two arrays to get a new array
     result = first
     result *= second
 
 proc `/`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
+    ## divide two arrays to get a new array
     result = first
     result /= second
-
-
 
 #
 #
