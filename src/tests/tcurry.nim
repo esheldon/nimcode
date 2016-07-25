@@ -21,11 +21,12 @@ proc init(mdata: var MyData, n: int) =
 #        data-mdata.data)
 
 proc makeDiffer(mdata: MyData): auto =
-    (proc(data: NDArray[float], diff: var NDArray[float]) =
-        diff = data
-        diff -= mdata.data
-        diff /= mdata.ierr
-        )
+    (
+        proc(data: NDArray[float], diff: var NDArray[float]) =
+            diff = data
+            diff -= mdata.data
+            diff /= mdata.ierr
+    )
 
 when isMainModule:
     let n=10
