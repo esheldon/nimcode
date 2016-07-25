@@ -20,13 +20,20 @@ proc init(mdata: var MyData, n: int) =
 #    (proc(data: NDArray[float]): NDarray[float] =
 #        data-mdata.data)
 
-proc makeDiffer(mdata: MyData): auto =
-    (
-        proc(data: NDArray[float], diff: var NDArray[float]) =
+# two different ways
+#proc makeDiffer(mdata: MyData): auto =
+#    (
+#        proc(data: NDArray[float], diff: var NDArray[float]) =
+#            diff = data
+#            diff -= mdata.data
+#            diff /= mdata.ierr
+#    )
+proc makeDiffer(mdata: MyData): proc =
+    return proc(data: NDArray[float], diff: var NDArray[float]) =
             diff = data
             diff -= mdata.data
             diff /= mdata.ierr
-    )
+
 
 when isMainModule:
     let n=10
