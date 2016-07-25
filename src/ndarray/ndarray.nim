@@ -99,6 +99,13 @@ proc ones*[T](dims: varargs[int]): NDArray[T] =
     for i in 0..<result.size:
         result.data[i] = T(1)
 
+proc replicate*[T](val: T, dims: varargs[int]): NDArray[T] =
+    ## get a new array filled with ones
+    result.init(dims)
+
+    for i in 0..<result.size:
+        result.data[i] = val
+
 proc arange*[T](dims: varargs[int]): NDArray[T] =
     ## get a new array filled with values from 0 to the number of elements
     result.init(dims)
