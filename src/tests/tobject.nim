@@ -1,27 +1,25 @@
 type
-    Animal* = object
-        name*, species*: string
+    Animal = object of RootObj
         age: int
 
-proc sleep*(a: var Animal) =
-    a.age += 1
+    Dog = object of Animal
 
-proc dead*(a: Animal): bool =
-    result = a.age > 20
+method get_age(self: Animal): int =
+    result=self.age
 
-var carl: Animal
+method age_human_years(self: Animal): int =
+    result=self.age
 
-carl = Animal(name : "Carl",
-              species : "L. glama",
-              age : 12)
+method age_human_years(self: Dog): int =
+    result=self.age * 7
 
-let joe = Animal(name : "Joe",
-                 species : "H. sapiens",
-                 age : 23)
+when isMainModule:
 
-#assert not carl.dead
-for i in 0..10:
-    carl.sleep()
-    echo("carl's age: ",carl.age) 
-    
-assert carl.dead
+    let cat = Animal(age: 3)
+    let dog = Dog(age: 3)
+
+    echo("cat age years:       ", cat.get_age())
+    echo("cat age human years: ", cat.age_human_years())
+
+    echo("dog age years:       ", dog.get_age())
+    echo("dog age human years: ", dog.age_human_years())
