@@ -1,4 +1,5 @@
 # TODO:  many things, but first
+#    - comparisons
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
@@ -12,6 +13,7 @@ import strutils
 import math
 
 type
+    # add of RootObj to make not final, for inheritance
     NDArray*[T] = object
 
         size: int              # size is product of all elements of dims
@@ -38,19 +40,19 @@ proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
 # read-only field getters
 #
 
-proc len*[T](self: NDArray[T]): int =
+proc len*[T](self: NDArray[T]): int {.inline.} =
     ## Get a copy of the array total size over all dimensions
     result=self.size
 
-proc dims*[T](self: NDArray[T]): seq[int] =
+proc dims*[T](self: NDArray[T]): seq[int] {.inline.} =
     ## Get a copy of the array dimensions
     result=self.dims
 
-proc ndim*[T](self: NDArray[T]): int =
+proc ndim*[T](self: NDArray[T]): int {.inline.} =
     ## Get a copy of the number of dimensions
     result=self.ndim
 
-proc strides*[T](self: NDArray[T]): seq[int] =
+proc strides*[T](self: NDArray[T]): seq[int] {.inline.} =
     ## Get a copy of the strides array
     result=self.strides
 
@@ -183,7 +185,7 @@ proc cumprod*[T](self: NDArray[T]): NDArray[T] {.inline.} =
 #
 
 # specific dimensions
-template `[]`*[T](self: NDArray[T], i: int): auto =
+proc `[]`*[T](self: NDArray[T], i: int): auto =
     let ndim=self.ndim
 
     if ndim != 1:
@@ -191,7 +193,7 @@ template `[]`*[T](self: NDArray[T], i: int): auto =
                            "tried to index $1 dimensional array with 1 index" % $ndim)
     self.data[i]
 
-template `[]`*[T](self: NDArray[T], i, j: int): auto =
+proc `[]`*[T](self: NDArray[T], i, j: int): auto =
     let ndim=self.ndim
 
     if ndim != 2:
@@ -202,7 +204,7 @@ template `[]`*[T](self: NDArray[T], i, j: int): auto =
         j
     ]
 
-template `[]`*[T](self: NDArray[T], i, j, k: int): auto =
+proc `[]`*[T](self: NDArray[T], i, j, k: int): auto =
     let ndim=self.ndim
 
     if ndim != 3:
@@ -214,7 +216,7 @@ template `[]`*[T](self: NDArray[T], i, j, k: int): auto =
         k
     ]
 
-template `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
+proc `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
     let ndim=self.ndim
 
     if ndim != 4:
@@ -228,7 +230,7 @@ template `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
         l
     ]
 
-template `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
+proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
     ## general element get
     ##
     ## might be slower than the specific ones above but
@@ -246,6 +248,7 @@ template `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
         index += self.strides[i]*indices[i]
 
     self.data[index]
+
 
 proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2): auto =
     ## general element set
@@ -396,6 +399,19 @@ proc `/=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError
 # we can implement promotions restrictions
 # otherwise, there is no clear way to choose the output type
 # other than by order in the expression
+
+
+# unary
+proc `+`*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+    ## just a copy
+    result = self
+
+proc `-`*[T](self: NDArray[T]): NDArray[T] {.inline.} =
+    ## negate all values
+    result = self
+
+    let minusone = T(-1.0)
+    result *= minusone
 
 
 proc `+`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
