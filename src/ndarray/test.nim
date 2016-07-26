@@ -2,6 +2,9 @@ import ndarray
 
 when isMainModule:
 
+    let nosize = zeros[float](0)
+    echo("nosize: ",nosize)
+
     var arr = zeros[float](3,4)
     arr[1,2]=3.1
 
@@ -115,6 +118,14 @@ when isMainModule:
     echo("arr5 strides:",arr5.strides)
     echo("arr5[2,1,3,4,2]: ",arr5[2,1,3,4,2])
 
+    let lins = linspace[float](1.0, 2.0, 10)
+    echo("lins: ",lins)
+
+    let lins_powerten = lins^2.0
+    echo("lins^2:", lins_powerten)
+
+    let logs = logspace[float](0.0, 1.0, 10)
+    echo("logs: ",logs)
 
     # these raise exceptions
     #oa += arr5

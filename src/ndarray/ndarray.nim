@@ -115,6 +115,39 @@ proc arange*[T](dims: varargs[int]): NDArray[T] =
     for i in 0..result.size-1:
         result.data[i] = T(i)
 
+proc linspace*[T](start, stop: T, npts: int): NDArray[T] =
+    ## TODO: deal with npts==0
+    if npts <= 0:
+      result=newArray[T](0)
+    elif npts==1:
+        result = zeros[T](npts)
+        result[0] = start
+    else:
+        result = arange[T](npts)
+        let step=(stop-start)/(float(npts)-1.0)
+
+        result *= step
+        result += start
+        result[npts-1] = stop
+
+proc logspace*[T](start, stop: T, npts: int, base: T = 10): NDArray[T] =
+    ## TODO: deal with npts==0
+    if npts <= 0:
+      result=newArray[T](0)
+    elif npts==1:
+        result = zeros[T](npts)
+        result[0] = start
+    else:
+        result = arange[T](npts)
+        let step=(stop-start)/(float(npts)-1.0)
+
+        result *= step
+        result += start
+        result[npts-1] = stop
+
+    for i in 0..<npts:
+        result[i] = pow(base, result[i])
+
 proc ravel*[T](orig: NDArray[T]): NDArray[T] =
     ## get a flattened version of the array, sharing the
     ## underlying data
@@ -313,6 +346,13 @@ proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
         self.data[i] /= tval
 
 # These make new arrays
+proc `^`*[T,T2](self: NDArray[T], power: T2): NDArray[T] {.inline.} =
+    ## get arr^power
+    result = self
+    for i in 0..<self.size:
+      result[i] = pow(result[i], power)
+
+
 proc `+`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
     ## get arr + constant
     result = self
