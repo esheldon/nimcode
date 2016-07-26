@@ -1,4 +1,5 @@
 import json
+import strutils
 
 proc asIntSeq(node: seq[PJsonNode]): seq[BiggestInt] =
     var output: seq[BiggestInt] = @[]
@@ -30,12 +31,11 @@ let
     fname="test_json.json"
     jobj_from_file = json.parseFile(fname)
 
-echo("name: '",$jobj_from_file["name"].str,"'")
+echo("name: '$1'" % jobj_from_file["name"].str)
 
 var nums = jobj_from_file["nums"].elems.asIntSeq()
 
-for el in nums:
-    echo("nums:  ",el)
+echo("nums: ",nums)
 
 echo("fval: ",jobj_from_file["fval"])
 
