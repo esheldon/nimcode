@@ -2,12 +2,10 @@ import ndarray
 
 type
     MyData = object
-        name: string
         data: NDArray[float]
         ierr: NDArray[float]
 
 proc init(mdata: var MyData, n: int) =
-    mdata.name="test name"
     mdata.data = arange[float](n)
     mdata.data += 1
 
