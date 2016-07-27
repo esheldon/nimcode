@@ -44,11 +44,22 @@ when isMainModule:
     oa .= 25
     echo(oa)
 
+    # now try setting elements equal without modifying storage
+    var ticopy = zeros[float]( expones.dims )
+    ticopy .= expones
+    echo("exp copied in place:")
+    echo(ticopy)
+
+    var tcopy=zeros[float](3)
+    tcopy = expones
+    echo("exp copied:")
+    echo(tcopy)
+
 
     # make a copy with these values
     let oacopy = oa
 
-    # set back
+    # set elements all back to 1.0
     oa .= 1
     echo("setting back to 1:")
     echo(oa)
