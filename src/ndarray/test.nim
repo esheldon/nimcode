@@ -171,3 +171,9 @@ when isMainModule:
     # these raise exceptions
     #oa += arr5
     #oa += arr
+
+    let xorig =arange[int](2*3*4).reshape(2,3,4)
+    echo("xorig[0,2,1]: ",xorig[0,2,1])
+
+    let xtrans = xorig.transpose()
+    echo("xtrans[0,2,1]: ",xtrans[0,2,1])

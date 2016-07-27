@@ -1,6 +1,5 @@
 # TODO:  many things, but first
 #    - comparisons
-#    - reshape
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
@@ -9,14 +8,28 @@
 #    - reduction over specific dimensions
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
+#    ? allow strides that are by byte rather than by count
+#        - this would faciliate things similar to numpy record arrays
+#        - would require casting the data
 
 import sequtils
 import strutils
 import math
 
+const rowMajor* = 1
+const colMajor* = 2
+
 type
+    # We could use this for consistency with linalg package
+    # but it currently gives warnings
+    #OrderType* = enum
+    #    rowMajor = 101,
+    #    colMajor = 102
+
     # add of RootObj to make not final, for inheritance
     NDArray*[T] = object
+
+        order: int
 
         size: int              # size is product of all elements of dims
         dims: seq[int]         # array holding the size of each dimension
@@ -87,6 +100,7 @@ proc init*[T](self: var NDArray[T], dims: varargs[int]) =
         self.dims[i] = dims[i]
         size = size * dims[i]
 
+    self.order = rowMajor
     self.strides = calc_strides(self.dims)
 
     #var total_stride=1
@@ -218,21 +232,44 @@ proc reshape*[T](self: NDArray[T], dims: varargs[int]): NDArray[T] =
     ## get an array that shares the underlying data with the
     ## input array, but interprets it with a different shape
 
-    result.dims = @dims
+    shallowCopy(result, self)
 
     var newsize=1
     for dim in dims:
         newsize *= dim
 
     if newsize != self.len:
-        let mess="reshape to $1 would change total size to $2 from $3" % [$result.dims,$newsize,$self.len]
+        let mess="reshape to $1 would change total size to $2 from $3" % [$(@dims),$newsize,$self.len]
         raise newException(ValueError, mess)
 
-    result.size = self.size
+    result.dims = @dims
     result.ndim = result.dims.len
     result.strides = calc_strides(result.dims)
 
     shallowCopy(result.data, self.data)
+
+proc reverse[T](self: seq[T]): seq[T] =
+    newSeq(result, self.len)
+
+    for i in 0..<self.len:
+        let irev = (self.len-1) - i
+
+        result[irev] = self[i]
+
+
+proc transpose*[T](self: NDArray[T]): NDArray[T] =
+    ## get an array that shares the underlying data with the
+    ## input array, but interprets it with transposed
+    ## dimensions
+
+    shallowCopy(result, self)
+
+    result.dims = reverse(self.dims)
+    result.strides = reverse(self.strides)
+    if self.order == rowMajor:
+        result.order=colMajor
+    else:
+        result.order=rowMajor
 
 #
 # reduction over elements
@@ -315,16 +352,16 @@ proc `[]`*[T](self: NDArray[T], i, j: int): auto =
         j
     ]
 
-proc `[]`*[T](self: NDArray[T], i, j, k: int): auto =
+proc `[]`*[T](self: NDArray[T], i, j, k: int): T =
     let ndim=self.ndim
 
     if ndim != 3:
         raise newException(IndexError,
                            "tried to index $1 dimensional array with 2 indices" % $ndim)
-    self.data[
+    result=self.data[
         i*self.strides[0] +
         j*self.strides[1] +
-        k
+        k*self.strides[2]
     ]
 
 proc `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
@@ -338,14 +375,14 @@ proc `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
         i*self.strides[0] +
         j*self.strides[1] +
         k*self.strides[2] +
-        l
+        l*self.strides[3]
     ]
+
 
 proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
     ## general element get
-    ##
-    ## might be slower than the specific ones above but
-    ## I haven't actually timed it
+    ## we should make it so the bounds checks will go away with bounds
+    ## checking off
 
     let ndim=self.ndim
     let nind=len(indices)
@@ -356,7 +393,14 @@ proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
 
     var index=0
     for i in 0..ndim-1:
-        index += self.strides[i]*indices[i]
+
+        let ind = indices[i]
+
+        if ind < 0 or ind >= self.dims[i]:
+            let mess="index $1 for dimension $1 is out of bounds [0,$3)" % [$ind, $i, $self.dims[i]]
+            raise newException(IndexError, mess)
+
+        index += self.strides[i]*ind
 
     self.data[index]
 
