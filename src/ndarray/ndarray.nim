@@ -85,10 +85,28 @@ proc init*[T](self: var NDArray[T], dims: varargs[int]) =
     newSeq(self.data, size)
     self.size=size
 
+proc fromSeq*[T](s: seq[T], copy: bool=true): NDArray[T] =
+    ## Get a new array filled with a copy of the input seq
 
-proc newArray*[T](dims: varargs[int]): NDArray[T] =
-    ## Get a new array filled with zeros
-    result.init(dims)
+    if copy:
+        result.init(s.len)
+
+        for i,val in pairs(s):
+            result.data[i] = val
+    else:
+        result.size=s.len
+        result.dims = @[result.size]
+        result.strides = @[1]
+
+        result.ndim=1
+        result.dims[0] = s.len
+        result.strides[0] = 1
+
+        shallowCopy(result.data, s)
+
+proc shareData*[T](a: NDArray[T]): NDArray[T] =
+    ## Get a new array that shares data with the input array
+    shallowCopy(result, a)
 
 proc zeros*[T](dims: varargs[int]): NDArray[T] =
     ## get a new array filled with zeros.
@@ -118,7 +136,7 @@ proc arange*[T](dims: varargs[int]): NDArray[T] =
 proc linspace*[T](start, stop: T, npts: int): NDArray[T] =
     ## TODO: deal with npts==0
     if npts <= 0:
-      result=newArray[T](0)
+      result=zeros[T](0)
     elif npts==1:
         result = zeros[T](npts)
         result[0] = start
@@ -133,7 +151,7 @@ proc linspace*[T](start, stop: T, npts: int): NDArray[T] =
 proc logspace*[T](start, stop: T, npts: int, base: T = 10): NDArray[T] =
     ## TODO: deal with npts==0
     if npts <= 0:
-      result=newArray[T](0)
+      result=zeros[T](0)
     elif npts==1:
         result = zeros[T](npts)
         result[0] = start
@@ -356,9 +374,10 @@ proc `/=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
 # These make new arrays
 proc `^`*[T,T2](self: NDArray[T], power: T2): NDArray[T] {.inline.} =
     ## get arr^power
+    ## todo: check for negative values raised to fractional power
     result = self
     for i in 0..<self.size:
-      result[i] = pow(result[i], power)
+      result[i] = pow( float(result[i]), float(power) )
 
 
 proc `+`*[T,T2](self: NDArray[T], val: T2): NDArray[T] {.inline.} =
