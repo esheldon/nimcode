@@ -5,6 +5,21 @@ when isMainModule:
     let nosize = zeros[float](0)
     echo("nosize: ",nosize)
 
+    var s = @[1,2,3]
+    let fromseq_copy = ndarray.fromSeq(s)
+    let fromseq_shared = ndarray.fromSeq(s, copy=false)
+
+
+    s[1] = 9999
+    echo("from seq copy:   ",fromseq_copy)
+    echo("from seq shared: ",fromseq_shared)
+
+    # convert arrays to sequences
+    let fixedarr = [3,4,5]
+    let fromarr = ndarray.fromSeq( @fixedarr )
+    echo("fromarr: ",fromarr)
+
+
     var arr = zeros[float](3,4)
     arr[1,2]=3.1
 
@@ -30,7 +45,7 @@ when isMainModule:
     echo(oa)
 
 
-    let expones = exp(oa)
+    var expones = exp(oa)
     echo("\nexp(oa):")
     echo(expones)
 
@@ -54,6 +69,11 @@ when isMainModule:
     tcopy = expones
     echo("exp copied:")
     echo(tcopy)
+
+    let expones_shared = expones.shareData()
+    expones[1,1] = 9999.0
+    echo("\nexpones shared:")
+    echo(expones_shared)
 
 
     # make a copy with these values
