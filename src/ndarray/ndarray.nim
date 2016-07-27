@@ -1,8 +1,10 @@
 # TODO:  many things, but first
 #    - comparisons
+#    - reshape
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
+#         - ^ is working but without error checking
 #    - type conversion
 #    - reduction over specific dimensions
 #    - add slicing
