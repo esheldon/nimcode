@@ -340,6 +340,27 @@ proc cumprod*[T](self: NDArray[T]): NDArray[T] {.inline.} =
     cumprod(self, result)
 
 
+# doesn't work yet
+iterator items[T](self: NDArray[T]): int {.inline.} =
+    var i = 0
+
+    var current_indices=newSeq[int]( self.ndim )
+
+    while i < self.size:
+
+        # work backwards along dimensions
+        for workdim in countdown(self.ndim-1,0):
+
+            current_indices[workdim] = 0
+            for varyi in 0..<self.dims[workdim]:
+
+                # get overall index implied by current set of indices
+                i=0
+                for idim in 0..<self.ndim:
+                    i += current_indices[idim]*self.strides[idim]
+                yield self.data[i]
+
+
 
 #
 # getters
@@ -451,15 +472,6 @@ proc `.=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     for i in 0..self.size-1:
         self.data[i] = tval
 
-proc `.=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.inline.} =
-    ## set all elements of an array equal that of another, checking
-    ## compatibility of dimensions
-    ensure_compatible_dims(self, other)
-
-    for i in 0..<self.size:
-        self.data[i] = T(other.data[i])
-
-
 proc `+=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     ## add a scalar to the array inplace
     let tval = T(val)
@@ -544,6 +556,14 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 #
 
 # in place operations
+
+proc `.=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.inline.} =
+    ## set all elements of an array equal that of another, checking
+    ## compatibility of dimensions
+    ensure_compatible_dims(self, other)
+
+    for i in 0..<self.size:
+        self.data[i] = T(other.data[i])
 
 proc `+=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.raises: [ValueError].} =
     ## add an array in place
