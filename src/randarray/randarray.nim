@@ -43,6 +43,15 @@ proc normal*(mn, sigma: float): float =
     ## standard deviation sigma
     result = mn + sigma*normal()
 
+proc normalArray*(size: int): NDArray[float] =
+    ## get an array of random numbers drawn from a Gaussian with mean 0 and
+    ## standard deviation 1.0
+
+    result.init(size)
+    
+    for i in 0..<result.len:
+        result[i] = normal()
+
 proc normalArray*(mn, sigma: float, size: int): NDArray[float] =
     ## get an array of random numbers drawn from a Gaussian with mean mn and
     ## standard deviation sigma
@@ -51,6 +60,7 @@ proc normalArray*(mn, sigma: float, size: int): NDArray[float] =
     
     for i in 0..<result.len:
         result[i] = normal(mn, sigma)
+
 
 when isMainModule:
     randomize()
