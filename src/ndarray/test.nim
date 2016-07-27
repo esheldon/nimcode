@@ -177,3 +177,25 @@ when isMainModule:
 
     let xtrans = xorig.transpose()
     echo("xtrans[0,2,1]: ",xtrans[0,2,1])
+
+
+    #var se: seq[string]
+
+    #setLen(se, 3)
+
+    var ahello = replicate("hello", 3)
+    echo("ahello: ",ahello)
+    var sarray = strings(3)
+    echo("sarray init: ",sarray)
+    sarray[1] = "stuff"
+    echo("sarray after: ",sarray)
+
+    type
+        mData = tuple
+            index: int
+            x: float
+            y: float
+
+    let darr = zeros[mData](3)
+
+    echo("darr zero: ",darr)

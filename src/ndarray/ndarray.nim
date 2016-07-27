@@ -1,4 +1,7 @@
 # TODO:  many things, but first
+#    - figure out how to implement type classes, so functions like
+#      zeros only work for numerical data, or some how can
+#      be adapted by type class
 #    - comparisons
 #    - ufuncs for math functions
 #         - do all in math module if possible
@@ -134,6 +137,13 @@ proc fromSeq*[T](s: seq[T], copy: bool=true): NDArray[T] =
 proc shareData*[T](a: NDArray[T]): NDArray[T] =
     ## Get a new array that shares data with the input array
     shallowCopy(result, a)
+
+proc strings*(dims: varargs[int]): NDArray[string] =
+    ## get a new array filled with empty strings
+    result.init(dims)
+
+    for i in 0..<result.len:
+        result.data[i] = ""
 
 proc zeros*[T](dims: varargs[int]): NDArray[T] =
     ## get a new array filled with zeros.
