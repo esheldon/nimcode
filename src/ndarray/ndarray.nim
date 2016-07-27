@@ -1,4 +1,7 @@
 # TODO:  many things, but first
+#    - fix bugs on operations between arrays by element; needs to be done
+#      with proper dimension subscripts due to row/column major
+#      order differences
 #    - figure out how to implement type classes, so functions like
 #      zeros only work for numerical data, or some how can
 #      be adapted by type class
