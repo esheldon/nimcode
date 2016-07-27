@@ -316,6 +316,14 @@ proc `.=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     for i in 0..self.size-1:
         self.data[i] = tval
 
+proc `.=`*[T,T2](self: var NDArray[T], other: NDArray[T2]) {.inline.} =
+    ## set all elements of an array equal that of another, checking
+    ## compatibility of dimensions
+    ensure_compatible_dims(self, other)
+
+    for i in 0..<self.size:
+        self.data[i] = T(other.data[i])
+
 
 proc `+=`*[T,T2](self: var NDArray[T], val: T2) {.inline.} =
     ## add a scalar to the array inplace
@@ -538,8 +546,6 @@ makeUFunc(rad2deg)
 #
 #    for i in 0..self.size-1:
 #        result.data[i] = exp(self.data[i])
-
-
 
 proc `$`*[T](self: NDArray[T]): string =
 
