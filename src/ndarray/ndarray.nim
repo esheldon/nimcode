@@ -59,6 +59,16 @@ proc strides*[T](self: NDArray[T]): seq[int] {.inline.} =
     result=self.strides
 
 
+proc calc_strides(dims: seq[int]): seq[int] =
+    let ndim = len(dims)
+    newSeq(result, ndim)
+
+    var total_stride=1
+    for i in countdown(ndim-1,0):
+
+        if i < ndim-1:
+            total_stride *= dims[i+1]
+        result[i] = total_stride
 
 
 proc init*[T](self: var NDArray[T], dims: varargs[int]) =
@@ -77,12 +87,13 @@ proc init*[T](self: var NDArray[T], dims: varargs[int]) =
         self.dims[i] = dims[i]
         size = size * dims[i]
 
-    var total_stride=1
-    for i in countdown(ndim-1,0):
+    self.strides = calc_strides(self.dims)
 
-        if i < ndim-1:
-            total_stride *= dims[i+1]
-        self.strides[i] = total_stride
+    #var total_stride=1
+    #for i in countdown(ndim-1,0):
+    #    if i < ndim-1:
+    #        total_stride *= dims[i+1]
+    #    self.strides[i] = total_stride
 
     newSeq(self.data, size)
     self.size=size
@@ -128,12 +139,32 @@ proc replicate*[T](val: T, dims: varargs[int]): NDArray[T] =
     for i in 0..<result.size:
         result.data[i] = val
 
-proc arange*[T](dims: varargs[int]): NDArray[T] =
-    ## get a new array filled with values from 0 to the number of elements
-    result.init(dims)
+proc arange*[T](n: int): NDArray[T] =
+    ## get a new array filled with values from 0 to n-1
+    result.init(n)
 
     for i in 0..result.size-1:
         result.data[i] = T(i)
+
+proc arange*[T](start: int, stop: int): NDArray[T] =
+    ## get a new array filled with the specified range of values
+    ## following nim style, the end is inclusive
+
+    var ntot = stop-start + 1
+
+    if ntot <= 0:
+        ntot = 0
+
+    result.init(ntot)
+
+    if ntot > 0:
+        for i in 0..<ntot:
+            result.data[i] = T(i+start)
+
+proc arange*[T](rng: Slice[int]): NDArray[T] =
+    ## get a new array filled with the specified range of values
+
+    result = arange[T](rng.a, rng.b)
 
 proc linspace*[T](start, stop: T, npts: int): NDArray[T] =
     ## TODO: deal with npts==0
@@ -183,6 +214,26 @@ proc ravel*[T](orig: NDArray[T]): NDArray[T] =
 
     shallowCopy(result.data, orig.data)
 
+proc reshape*[T](self: NDArray[T], dims: varargs[int]): NDArray[T] =
+    ## get an array that shares the underlying data with the
+    ## input array, but interprets it with a different shape
+
+    result.dims = @dims
+
+    var newsize=1
+    for dim in dims:
+        newsize *= dim
+
+    if newsize != self.len:
+        let mess="reshape to $1 would change total size to $2 from $3" % [$result.dims,$newsize,$self.len]
+        raise newException(ValueError, mess)
+
+    result.size = self.size
+    result.ndim = result.dims.len
+    result.strides = calc_strides(result.dims)
+
+    shallowCopy(result.data, self.data)
+
 #
 # reduction over elements
 #
@@ -207,6 +258,13 @@ proc cumsum*[T](self: NDArray[T]): NDArray[T] {.inline.} =
     ## cumulative sum over elements in the array
     result.init(self.dims)
     cumsum(self, result)
+
+proc prod*[T](self: seq[T]): T =
+    ## product over elements in the sequence
+
+    result=1
+    for i in 0..self.len-1:
+        result *= self[i]
 
 proc prod*[T](self: NDArray[T]): T =
     ## product over elements in the array

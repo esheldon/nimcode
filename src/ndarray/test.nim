@@ -116,15 +116,25 @@ when isMainModule:
     if oa[1,1] != oaravel[4]:
         raise newException(ValueError,"did not match")
 
-    var tmp=arange[float](3,3)
+    let tss1 = arange[int](3,6)
+    echo("tss1: ",tss1)
+    let tss2 = arange[int](3..6)
+    echo("tss2: ",tss2)
+
+    var treshape = arange[float](3*3).reshape(3,3)
+    echo("range reshaped: ")
+    echo(treshape)
+
+    var tdims = @[3,3]
+    var tmp=arange[float](prod(tdims)).reshape(tdims)
     tmp *= 3
 
-    oa += tmp
+    tmp += tmp
     echo("\nadding in place:")
     echo(tmp)
     echo(oa)
 
-    var rng = arange[float](3,4)
+    var rng = arange[float](3*4).reshape(3,4)
     echo("\nrng:")
     echo(rng)
     echo("rng[1,1]: ",rng[1,1])
@@ -141,11 +151,11 @@ when isMainModule:
 
 
 
-    var arr4 = arange[float](3,4,5,6)
+    var arr4 = arange[float](3*4*5*6).reshape(3,4,5,6)
     echo("arr4 strides:",arr4.strides)
     echo("arr4[2,1,3,4]: ",arr4[2,1,3,4])
 
-    var arr5 = arange[float](3,4,5,6,7)
+    var arr5 = arange[float](3*4*5*6*7).reshape(3,4,5,6,7)
     echo("arr5 strides:",arr5.strides)
     echo("arr5[2,1,3,4,2]: ",arr5[2,1,3,4,2])
 
