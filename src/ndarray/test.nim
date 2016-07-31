@@ -185,6 +185,12 @@ when isMainModule:
     for item in items(xtrans):
         echo("    ",item) 
 
+    echo("zipping")
+    var xsymm1 = arange[float](3*3)
+    var xsymm2 = xsymm1.transpose()
+    for prs in zip(xsymm1, xsymm2):
+        echo(prs)
+
     for item in mitems(xtrans):
         item = 3
     echo(xtrans)

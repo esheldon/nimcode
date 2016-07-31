@@ -422,6 +422,41 @@ iterator mitems*[T](self: var NDArray[T]): var T {.inline.} =
                     break
 
 
+iterator zip*[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a: S, b: T] {.inline.} =
+    ## iterator to zip two arrays.
+    ## this is stride and order aware
+    ensure_compatible_dims(a1, a2)
+
+    let L = len(a1)
+
+    var
+      i1 = 0
+      i2 = 0
+      current_indices=newSeq[int]( a1.ndim )
+
+    while i1 < (a1.size-1):
+
+        i1=0
+        i2=0
+        for idim in 0..<a1.ndim:
+            i1 += current_indices[idim]*a1.strides[idim]
+            i2 += current_indices[idim]*a2.strides[idim]
+
+        yield (a1.data[i1], a2.data[i2])
+
+        assert(len(a1) == L, "array modified while iterating over it")
+        assert(len(a2) == L, "array modified while iterating over it")
+
+        for idim in countdown(a1.ndim-1,0):
+            if current_indices[idim] == (a1.dims[idim]-1):
+                # reset this dim but continue to the next earliest
+                current_indices[idim] = 0
+            else:
+                current_indices[idim] += 1
+                break
+
+
+
 #
 # getters
 #
