@@ -172,11 +172,22 @@ when isMainModule:
     #oa += arr5
     #oa += arr
 
-    let xorig =arange[int](2*3*4).reshape(2,3,4)
+    let xorig =arange[float](2*3*4).reshape(2,3,4)
     echo("xorig[0,2,1]: ",xorig[0,2,1])
 
-    let xtrans = xorig.transpose()
+    var xtrans = xorig.transpose()
     echo("xtrans[0,2,1]: ",xtrans[0,2,1])
+
+    echo("iterating xorig:")
+    for item in items(xorig):
+        echo("    ",item) 
+    echo("iterating xtrans:")
+    for item in items(xtrans):
+        echo("    ",item) 
+
+    for item in mitems(xtrans):
+        item = 3
+    echo(xtrans)
 
 
     #var se: seq[string]

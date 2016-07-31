@@ -340,26 +340,86 @@ proc cumprod*[T](self: NDArray[T]): NDArray[T] {.inline.} =
     cumprod(self, result)
 
 
-# doesn't work yet
-iterator items[T](self: NDArray[T]): int {.inline.} =
-    var i = 0
 
-    var current_indices=newSeq[int]( self.ndim )
+# TODO: also need to check contiguous for fast one, when
+# we implement slices etc.
 
-    while i < self.size:
+iterator items*[T](self: NDArray[T]): T {.inline.} =
+    ## iterator over all elements of the array.
+    ## even if the array is colMajor the order is
+    ## last dimension varying the fastest, in which
+    ## case the data is not in memory order
+    ##
+    ## preserving this order makes operatioins between
+    ## colMajor and rowMajor straightforward
 
-        # work backwards along dimensions
-        for workdim in countdown(self.ndim-1,0):
+    let L = len(self)
 
-            current_indices[workdim] = 0
-            for varyi in 0..<self.dims[workdim]:
+    if self.order == rowMajor:
+        # fast version
+        var i=0
+        while i < self.size:
+            yield self.data[i]
+            inc(i)
+            assert(len(self) == L, "seq modified while iterating over it")
+    else:
+        var i = 0
 
-                # get overall index implied by current set of indices
-                i=0
-                for idim in 0..<self.ndim:
-                    i += current_indices[idim]*self.strides[idim]
-                yield self.data[i]
+        var current_indices=newSeq[int]( self.ndim )
+        while i < (self.size-1):
 
+            i=0
+            for idim in 0..<self.ndim:
+                i += current_indices[idim]*self.strides[idim]
+            yield self.data[i]
+            assert(len(self) == L, "seq modified while iterating over it")
+
+            for idim in countdown(self.ndim-1,0):
+                if current_indices[idim] == (self.dims[idim]-1):
+                    # reset this dim but continue to the next earliest
+                    current_indices[idim] = 0
+                else:
+                    current_indices[idim] += 1
+                    break
+
+
+iterator mitems*[T](self: var NDArray[T]): var T {.inline.} =
+    ## iterator over all elements of the array.
+    ## even if the array is colMajor the order is
+    ## last dimension varying the fastest, in which
+    ## case the data is not in memory order
+    ##
+    ## preserving this order makes operatioins between
+    ## colMajor and rowMajor straightforward
+
+    let L = len(self)
+
+    if self.order == rowMajor:
+        # fast version
+        var i=0
+        while i < self.size:
+            yield self.data[i]
+            inc(i)
+            assert(len(self) == L, "seq modified while iterating over it")
+    else:
+        var i = 0
+
+        var current_indices=newSeq[int]( self.ndim )
+        while i < (self.size-1):
+
+            i=0
+            for idim in 0..<self.ndim:
+                i += current_indices[idim]*self.strides[idim]
+            yield self.data[i]
+            assert(len(self) == L, "seq modified while iterating over it")
+
+            for idim in countdown(self.ndim-1,0):
+                if current_indices[idim] == (self.dims[idim]-1):
+                    # reset this dim but continue to the next earliest
+                    current_indices[idim] = 0
+                else:
+                    current_indices[idim] += 1
+                    break
 
 
 #
