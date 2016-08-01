@@ -180,10 +180,10 @@ when isMainModule:
 
     echo("iterating xorig:")
     for item in items(xorig):
-        echo("    ",item) 
+        echo("    ",item)
     echo("iterating xtrans:")
     for item in items(xtrans):
-        echo("    ",item) 
+        echo("    ",item)
 
     echo("zipping")
     var xsymm1 = arange[float](3*3)
