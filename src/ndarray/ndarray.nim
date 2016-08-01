@@ -1,11 +1,10 @@
 # TODO:  many things, but first
-#    - fix bugs on operations between arrays by element; needs to be done
-#      with proper dimension subscripts due to row/column major
-#      order differences
+#    - make sure all array operations are using the iterators
 #    - figure out how to implement type classes, so functions like
 #      zeros only work for numerical data, or some how can
 #      be adapted by type class
 #    - comparisons
+#    - where, all, any
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
