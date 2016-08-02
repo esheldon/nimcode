@@ -7,9 +7,8 @@
 #    - where, all, any
 #    - ufuncs for math functions
 #         - do all in math module if possible
-#         - some like pow, ^, mod, tan2, arctan2, fmod, hypot are special
-#         - ^ is working but without error checking
-#    - type conversion
+#         - ^,pow are working but without error checking
+#    - type conversion: multiply an integer by a float, we need to get a float back
 #    - reduction over specific dimensions
 #    - add slicing
 #    - add ordering, e.g. row major vs col major
@@ -531,13 +530,65 @@ iterator zip*[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a: S, b: T] {.inline.
     for i1,i2 in izip1d(a1, a2):
         yield (a1.data[i1], a2.data[i2])
 
+template MakeBooleanUniOp(op: expr) =
+    proc op*(self: NDArray[bool]): NDArray[bool] =
+        result.init(self.dims)
 
-template MakeInplaceOp(op: expr) =
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(self.data[iself])
+
+
+template MakeBooleanOp(op: expr) =
+    proc op*(a1: NDArray[bool], a2: NDArray[bool]): NDArray[bool] =
+        ensure_compatible_dims(a1, a2)
+
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = op(a1.data[i1], a2.data[i2])
+
+
+template MakeCompareOp(op: expr) =
+    proc op*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
+        ensure_compatible_dims(a1, a2)
+
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = op(a1.data[i1], a2.data[i2])
+
+template MakeCompareOpScalar(op: expr) =
+    proc op*[S, T](self: NDArray[S], val: T): NDArray[bool] =
+        result.init(self.dims)
+
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(self.data[iself], val)
+
+    proc op*[S, T](val: T, self: NDArray[S]): NDArray[bool] =
+        result.init(self.dims)
+
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(val, self.data[iself])
+
+
+
+
+template MakeCompareOpSpecial(opname: expr, op: expr) =
+    proc opname*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
+        ensure_compatible_dims(a1, a2)
+
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = op(a1.data[i1], a2.data[i2])
+
+
+template MakeInplaceArithmeticOp(op: expr) =
     proc op*[S, T](self: var NDArray[S], other: NDArray[T]) =
         for i1,i2 in izip1d(self, other):
             op(self.data[i1], self.data[i2])
 
-template MakeInplaceOpSpecial(opname: expr, op: expr) =
+template MakeInplaceArithmeticOpSpecial(opname: expr, op: expr) =
     ## e.g. for `.=` which, which is a by-element assignment
     ## between two arrays
     proc opname*[S, T](self: var NDArray[S], other: NDArray[T]) =
@@ -607,7 +658,7 @@ proc checkIndices[T](self: NDArray[T], indices: varargs[int]) {.inline.} =
 proc getIndex1d[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
     checkIndices(self, indices)
 
-    var result=0
+    result=0
     for i in 0..self.ndim-1:
 
         let ind = indices[i]
@@ -622,6 +673,7 @@ proc getIndex1d[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
 
 proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
     ## general element get
+    ## with all the calculations and bounds checking this is pretty slow
 
     let index = getIndex1d(self, indices)
     result = self.data[index]
@@ -741,11 +793,11 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 
 # in place operations between arrays
 
-MakeInplaceOpSpecial(`.=`,`=`)
-MakeInplaceOp(`+=`)
-MakeInplaceOp(`-=`)
-MakeInplaceOp(`*=`)
-MakeInplaceOp(`/=`)
+MakeInplaceArithmeticOpSpecial(`.=`,`=`)
+MakeInplaceArithmeticOp(`+=`)
+MakeInplaceArithmeticOp(`-=`)
+MakeInplaceArithmeticOp(`*=`)
+MakeInplaceArithmeticOp(`/=`)
 
 # operations that make new arrays
 #
@@ -786,6 +838,52 @@ proc `/`*[T](first, second: NDArray[T]): NDArray[T] {.inline.} =
     ## divide two arrays to get a new array
     result = first
     result /= second
+
+discard """
+proc `not` *(self: NDArray[bool]): NDArray[bool] =
+    result.init(self.dims)
+
+    for ires, iself in izip1d(result, self):
+        result.data[ires] = not self.data[iself]
+"""
+
+# the template defined ones are not working
+# see system.nim
+MakeBooleanUniOp(`not`)
+
+MakeBooleanOp(`and`)
+MakeBooleanOp(`or`)
+MakeBooleanOp(`xor`)
+
+MakeCompareOp(`==`)
+MakeCompareOpScalar(`==`)
+#MakeCompareOp(`!=`)
+#MakeCompareOpScalar(`!=`)
+MakeCompareOp(`<`)
+MakeCompareOpScalar(`<`)
+MakeCompareOp(`<=`)
+MakeCompareOpScalar(`<=`)
+#MakeCompareOp(`>`)
+#MakeCompareOpScalar(`>`)
+#MakeCompareOp(`>=`)
+#MakeCompareOpScalar(`>=`)
+
+#proc `!=`*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
+#    ensure_compatible_dims(a1, a2)
+
+#    result.init(a1.dims)
+
+#    for ires, i1, i2 in izip1d(result, a1, a2):
+#        result.data[ires] = not (a1.data[i1] == a2.data[i2])
+
+#proc `!=`*[T](a1, a2: NDArray[T]): NDArray[bool] =
+#    ensure_compatible_dims(a1, a2)
+
+#    result.init(a1.dims)
+
+#    for ires, i1, i2 in izip1d(result, a1, a2):
+#        result.data[ires] = not (a1.data[i1] == a2.data[i2])
+
 
 #
 #
@@ -865,6 +963,7 @@ makeUFunc(rad2deg)
 makeUFunc2(arctan2)
 makeUFunc2(hypot)
 makeUFunc2(fmod)
+makeUFunc2(pow)
 
 #makeUFunc[float](exp)
 #proc exp*[T](self: NDArray[T]): NDArray[T] {.inline.} =

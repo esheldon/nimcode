@@ -1,4 +1,11 @@
 import ndarray
+import strutils
+
+#proc `!=`[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
+#    result.init(a1.dims)
+#    for i in 0..<a1.len:
+#        result[i] = not (a1[i] == a2[i])
+
 
 when isMainModule:
 
@@ -220,3 +227,18 @@ when isMainModule:
     let darr = zeros[mData](3)
 
     echo("darr zero: ",darr)
+
+    var xfirst = ones[float](3)
+    let xsecond = ones[float](3)
+
+    xfirst[2] = 3
+
+    let teqtest = (xfirst == xsecond)
+    echo("== : ", xfirst == xsecond)
+    echo("!= : ", not (xfirst == xsecond) )
+    echo("<  : ", xfirst < xsecond )
+    echo("<= : ", xfirst <= xsecond )
+
+    echo("< 100.0 : ", xfirst < 100.0)
+    echo("100.0 > : ", 100.0 > xfirst)
+    #echo(teqtest)
