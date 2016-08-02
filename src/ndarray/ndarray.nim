@@ -1,22 +1,24 @@
 # TODO:  many things, but first
+#    - using a reference type for the main array means they could
+#      be packed into tuples
 #    - make sure all array operations are using the iterators
 #    - figure out how to implement type classes, so functions like
 #      zeros only work for numerical data, or some how can
 #      be adapted by type class
 #    - comparisons
-#    - where, all, any
+#       - some we can't seem to override, e.g. !=
+#    - where
 #    - ufuncs for math functions
 #         - do all in math module if possible
 #         - ^,pow are working but without error checking
 #    - type conversion: multiply an integer by a float, we need to get a float back
 #    - reduction over specific dimensions
-#    - add slicing
+#    - add slicing, including things like a[5] producing a new ndim-1 dim array
 #    - add ordering, e.g. row major vs col major
 #    ? allow strides that are by byte rather than by count
 #        - this would faciliate things similar to numpy record arrays
 #        - would require casting the data
 
-import sequtils
 import strutils
 import math
 
@@ -530,47 +532,6 @@ iterator zip*[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a: S, b: T] {.inline.
     for i1,i2 in izip1d(a1, a2):
         yield (a1.data[i1], a2.data[i2])
 
-template MakeBooleanUniOp(op: expr) =
-    proc op*(self: NDArray[bool]): NDArray[bool] =
-        result.init(self.dims)
-
-        for ires, iself in izip1d(result, self):
-            result.data[ires] = op(self.data[iself])
-
-
-template MakeBooleanOp(op: expr) =
-    proc op*(a1: NDArray[bool], a2: NDArray[bool]): NDArray[bool] =
-        ensure_compatible_dims(a1, a2)
-
-        result.init(a1.dims)
-
-        for ires, i1, i2 in izip1d(result, a1, a2):
-            result.data[ires] = op(a1.data[i1], a2.data[i2])
-
-
-template MakeCompareOp(op: expr) =
-    proc op*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
-        ensure_compatible_dims(a1, a2)
-
-        result.init(a1.dims)
-
-        for ires, i1, i2 in izip1d(result, a1, a2):
-            result.data[ires] = op(a1.data[i1], a2.data[i2])
-
-template MakeCompareOpScalar(op: expr) =
-    proc op*[S, T](self: NDArray[S], val: T): NDArray[bool] =
-        result.init(self.dims)
-
-        for ires, iself in izip1d(result, self):
-            result.data[ires] = op(self.data[iself], val)
-
-    proc op*[S, T](val: T, self: NDArray[S]): NDArray[bool] =
-        result.init(self.dims)
-
-        for ires, iself in izip1d(result, self):
-            result.data[ires] = op(val, self.data[iself])
-
-
 
 
 template MakeCompareOpSpecial(opname: expr, op: expr) =
@@ -583,62 +544,44 @@ template MakeCompareOpSpecial(opname: expr, op: expr) =
             result.data[ires] = op(a1.data[i1], a2.data[i2])
 
 
-template MakeInplaceArithmeticOp(op: expr) =
-    proc op*[S, T](self: var NDArray[S], other: NDArray[T]) =
-        for i1,i2 in izip1d(self, other):
-            op(self.data[i1], self.data[i2])
-
-template MakeInplaceArithmeticOpSpecial(opname: expr, op: expr) =
-    ## e.g. for `.=` which, which is a by-element assignment
-    ## between two arrays
-    proc opname*[S, T](self: var NDArray[S], other: NDArray[T]) =
-        for i1,i2 in izip1d(self, other):
-            op(self.data[i1], self.data[i2])
-
 
 #
 # getters
 #
 
-# specific dimensions for speed; are they actually faster
+# specific dimensions for speed; unrolling the loop
+# to get the index.  I haven't tested how much faster
+# these are
 
-proc `[]`*[T](self: NDArray[T], i: int): auto =
-    let ndim=self.ndim
-
-    if ndim != 1:
+proc `[]`*[T](self: NDArray[T], i: int): T {.inline.} =
+    if self.ndim != 1:
         raise newException(IndexError,
-                           "tried to index $1 dimensional array with 1 index" % $ndim)
+                           "tried to index $1 dimensional array with 1 index" % $self.ndim)
     self.data[i]
 
-proc `[]`*[T](self: NDArray[T], i, j: int): auto =
-    let ndim=self.ndim
-
-    if ndim != 2:
+proc `[]`*[T](self: NDArray[T], i, j: int): T {.inline.} =
+    if self.ndim != 2:
         raise newException(IndexError,
-                           "tried to index $1 dimensional array with 2 indices" % $ndim)
+                           "tried to index $1 dimensional array with 2 indices" % $self.ndim)
     self.data[
         i*self.strides[0] +
         j
     ]
 
-proc `[]`*[T](self: NDArray[T], i, j, k: int): T =
-    let ndim=self.ndim
-
-    if ndim != 3:
+proc `[]`*[T](self: NDArray[T], i, j, k: int): T {.inline.} =
+    if self.ndim != 3:
         raise newException(IndexError,
-                           "tried to index $1 dimensional array with 2 indices" % $ndim)
+                           "tried to index $1 dimensional array with 2 indices" % $self.ndim)
     result=self.data[
         i*self.strides[0] +
         j*self.strides[1] +
         k*self.strides[2]
     ]
 
-proc `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
-    let ndim=self.ndim
-
-    if ndim != 4:
+proc `[]`*[T](self: NDArray[T], i, j, k, l: int): T {.inline.} =
+    if self.ndim != 4:
         raise newException(IndexError,
-                           "tried to index $1 dimensional array with 2 indices" % $ndim)
+                           "tried to index $1 dimensional array with 2 indices" % $self.ndim)
 
     self.data[
         i*self.strides[0] +
@@ -646,6 +589,7 @@ proc `[]`*[T](self: NDArray[T], i, j, k, l: int): auto =
         k*self.strides[2] +
         l*self.strides[3]
     ]
+
 
 proc checkIndices[T](self: NDArray[T], indices: varargs[int]) {.inline.} =
     let ndim=self.ndim
@@ -655,7 +599,7 @@ proc checkIndices[T](self: NDArray[T], indices: varargs[int]) {.inline.} =
         let mess="tried to index $1 dimensional array with $2 indices" % [$ndim, $nind]
         raise newException(IndexError, mess)
 
-proc getIndex1d[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
+proc getIndex1dOld[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
     checkIndices(self, indices)
 
     result=0
@@ -671,7 +615,17 @@ proc getIndex1d[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
 
         result += self.strides[i]*ind
 
-proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
+proc getIndex1d[T](self: NDArray[T], indices: varargs[int]): int {.inline.} =
+    ## this is slower than the predefined ones due to extra lookups
+    ## over the indices
+
+    checkIndices(self, indices)
+
+    result=0
+    for i in 0..self.ndim-1:
+        result += self.strides[i]*indices[i]
+
+proc `[]`*[T](self: NDArray[T], indices: varargs[int]): T {.inline.} =
     ## general element get
     ## with all the calculations and bounds checking this is pretty slow
 
@@ -679,7 +633,7 @@ proc `[]`*[T](self: NDArray[T], indices: varargs[int]): auto =
     result = self.data[index]
 
 
-proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2): auto =
+proc `[]=`*[T,T2](self: var NDArray[T], indices: varargs[int], val: T2) {.inline.} =
     ## general element set
     ##
     ## The value must be convertible to the type of the array
@@ -793,11 +747,25 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 
 # in place operations between arrays
 
+template MakeInplaceArithmeticOp(op: expr) =
+    proc op*[S, T](self: var NDArray[S], other: NDArray[T]) =
+        for i1,i2 in izip1d(self, other):
+            op(self.data[i1], self.data[i2])
+
+template MakeInplaceArithmeticOpSpecial(opname: expr, op: expr) =
+    ## e.g. for `.=` which, which is a by-element assignment
+    ## between two arrays
+    proc opname*[S, T](self: var NDArray[S], other: NDArray[T]) =
+        for i1,i2 in izip1d(self, other):
+            op(self.data[i1], self.data[i2])
+
 MakeInplaceArithmeticOpSpecial(`.=`,`=`)
 MakeInplaceArithmeticOp(`+=`)
 MakeInplaceArithmeticOp(`-=`)
 MakeInplaceArithmeticOp(`*=`)
 MakeInplaceArithmeticOp(`/=`)
+
+
 
 # operations that make new arrays
 #
@@ -847,6 +815,48 @@ proc `not` *(self: NDArray[bool]): NDArray[bool] =
         result.data[ires] = not self.data[iself]
 """
 
+template MakeBooleanUniOp(op: expr) =
+    proc op*(self: NDArray[bool]): NDArray[bool] =
+        result.init(self.dims)
+
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(self.data[iself])
+
+
+template MakeBooleanOp(op: expr) =
+    proc op*(a1: NDArray[bool], a2: NDArray[bool]): NDArray[bool] =
+        ensure_compatible_dims(a1, a2)
+
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = op(a1.data[i1], a2.data[i2])
+
+
+template MakeCompareOp(op: expr) =
+    proc op*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
+        ensure_compatible_dims(a1, a2)
+
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = op(a1.data[i1], a2.data[i2])
+
+template MakeCompareOpScalar(op: expr) =
+    proc op*[S, T](self: NDArray[S], val: T): NDArray[bool] =
+        result.init(self.dims)
+
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(self.data[iself], val)
+
+    proc op*[S, T](val: T, self: NDArray[S]): NDArray[bool] =
+        result.init(self.dims)
+
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = op(val, self.data[iself])
+
+
+
 # the template defined ones are not working
 # see system.nim
 MakeBooleanUniOp(`not`)
@@ -883,6 +893,59 @@ MakeCompareOpScalar(`<=`)
 
 #    for ires, i1, i2 in izip1d(result, a1, a2):
 #        result.data[ires] = not (a1.data[i1] == a2.data[i2])
+
+
+proc alltrue *(self: NDArray[bool]): bool =
+    ## returns true if all elements of the input boolean
+    ## array are true.
+    result=true
+    for val in self:
+        if val != true:
+            result=false
+            break
+
+proc anytrue *(self: NDArray[bool]): bool =
+    ## returns true if any elements of the input boolean
+    ## array are true.
+    result=false
+    for val in self:
+        if val == true:
+            result=true
+            break
+
+proc any*[T](self: NDArray[T], pred: proc(item: T): bool {.closure.}): bool =
+  ## Iterates through an array and checks if some item fulfills the
+  ## predicate.
+  ##
+  ## Example:
+  ##
+  ## .. code-block::
+  ##   let a = range[int](10)
+  ##   assert any(a, proc (x: int): bool = return x > 8) == true
+  ##   assert any(a, proc (x: int): bool = return x > 20) == false
+
+  result=false
+  for val in self:
+      if pred(val):
+          result=true
+          break
+
+proc all*[T](self: NDArray[T], pred: proc(item: T): bool {.closure.}): bool =
+  ## Iterates through an array and checks if all items fulfill the
+  ## predicate.
+  ##
+  ## Example:
+  ##
+  ## .. code-block::
+  ##   let numbers = @[1, 4, 5, 8, 9, 7, 4]
+  ##   assert any(numbers, proc (x: int): bool = return x > 8) == true
+  ##   assert any(numbers, proc (x: int): bool = return x > 9) == false
+
+  result=true
+  for val in self:
+      if not pred(val):
+          result=false
+          break
 
 
 

@@ -1,12 +1,6 @@
 import ndarray
 import strutils
 
-#proc `!=`[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
-#    result.init(a1.dims)
-#    for i in 0..<a1.len:
-#        result[i] = not (a1[i] == a2[i])
-
-
 when isMainModule:
 
     let nosize = zeros[float](0)
@@ -16,6 +10,7 @@ when isMainModule:
     let fromseq_copy = ndarray.fromSeq(s)
     let fromseq_shared = ndarray.fromSeq(s, copy=false)
 
+    #echo(fromseq_copy[1000])
 
     s[1] = 9999
     echo("from seq copy:   ",fromseq_copy)
@@ -247,3 +242,11 @@ when isMainModule:
     echo("100.0 > : ", 100.0 > xfirst)
 
     echo("2.0 < x < 4.0 : ", xfirst > 2.0 and xfirst < 4.0)
+    #let test = any(xfirst > 2.0 and xfirst < 4.0)
+    #echo("test:",test)
+    echo("anytrue(2.0 < x < 4.0) : ",anytrue(xfirst > 2.0 and xfirst < 4.0))
+    echo("alltrue(2.0 < x < 4.0) : ",alltrue(xfirst > 2.0 and xfirst < 4.0))
+
+    echo("any: ", any(xfirst, proc(x: float): bool = return x > 2.0 and x < 4.0))
+    echo("all: ", all(xfirst, proc(x: float): bool = return x > 2.0 and x < 4.0))
+
