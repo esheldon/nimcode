@@ -231,6 +231,10 @@ when isMainModule:
     var xfirst = ones[float](3)
     let xsecond = ones[float](3)
 
+    echo("\n")
+    echo(xfirst)
+    echo(xsecond)
+
     xfirst[2] = 3
 
     let teqtest = (xfirst == xsecond)
@@ -241,4 +245,5 @@ when isMainModule:
 
     echo("< 100.0 : ", xfirst < 100.0)
     echo("100.0 > : ", 100.0 > xfirst)
-    #echo(teqtest)
+
+    echo("2.0 < x < 4.0 : ", xfirst > 2.0 and xfirst < 4.0)

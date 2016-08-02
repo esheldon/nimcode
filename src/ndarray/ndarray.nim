@@ -885,6 +885,7 @@ MakeCompareOpScalar(`<=`)
 #        result.data[ires] = not (a1.data[i1] == a2.data[i2])
 
 
+
 #
 #
 # Inspired by https://github.com/unicredit/linear-algebra/blob/master/private/ufunc.nim
