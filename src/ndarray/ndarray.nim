@@ -590,6 +590,19 @@ proc `[]`*[T](self: NDArray[T], i, j, k, l: int): T {.inline.} =
         l*self.strides[3]
     ]
 
+proc `[]`*[T](self: NDArray[T], i, j, k, l, m: int): T {.inline.} =
+    # this check is significant, 20% overhead for simple access
+    if self.ndim != 5:
+        raise newException(IndexError,
+                           "tried to index $1 dimensional array with 2 indices" % $self.ndim)
+
+    self.data[
+        i*self.strides[0] +
+        j*self.strides[1] +
+        k*self.strides[2] +
+        l*self.strides[3] +
+        m*self.strides[4]
+    ]
 
 proc checkIndices[T](self: NDArray[T], indices: varargs[int]) {.inline.} =
     let ndim=self.ndim
