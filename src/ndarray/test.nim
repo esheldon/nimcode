@@ -44,6 +44,9 @@ when isMainModule:
     echo("\nones:")
     echo(oa)
 
+    let at2 = arctan2(oa, oa)
+    echo("\nat2:")
+    echo(at2)
 
     var expones = exp(oa)
     echo("\nexp(oa):")
@@ -179,7 +182,8 @@ when isMainModule:
     echo("xtrans[0,2,1]: ",xtrans[0,2,1])
 
     echo("iterating xorig:")
-    for item in items(xorig):
+    # can also use items
+    for item in xorig:
         echo("    ",item)
     echo("iterating xtrans:")
     for item in items(xtrans):

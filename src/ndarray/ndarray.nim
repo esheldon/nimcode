@@ -45,7 +45,10 @@ type
 
         data: seq[T]           # use 1-D sequence as backing
 
+
+
 proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
+    ## private proc to check dimensions are compatible
     if a1.ndim != a2.ndim:
         let mess="mismatched number of dimensions for +=: $1 != $2" % [$a2.ndim,$a1.ndim]
         raise newException(ValueError, mess)
@@ -54,6 +57,155 @@ proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
         if a1.dims[i] != a2.dims[i]:
             let mess="mismatched dimensions for +=: $1 != $2" % [$a2.dims,$a1.dims]
             raise newException(ValueError, mess)
+
+#
+# private iterators for stride and order aware access
+# to the underlying private 1-d sequence
+#
+
+iterator indices1d[T](self: NDArray[T]): int {.inline.} =
+    ## iterator for the 1-d indices into an array
+
+    let L = len(self)
+
+    if self.order == rowMajor:
+        # fast version
+        var i=0
+        while i < self.size:
+            yield i
+            inc(i)
+            assert(len(self) == L, "seq modified while iterating over it")
+    else:
+        var i = 0
+
+        var current_indices=newSeq[int]( self.ndim )
+        while i < (self.size-1):
+
+            i=0
+            for idim in 0..<self.ndim:
+                i += current_indices[idim]*self.strides[idim]
+            yield i
+            assert(len(self) == L, "seq modified while iterating over it")
+
+            for idim in countdown(self.ndim-1,0):
+                if current_indices[idim] == (self.dims[idim]-1):
+                    # reset this dim but continue to the next earliest
+                    current_indices[idim] = 0
+                else:
+                    current_indices[idim] += 1
+                    break
+
+proc makeIndices1d[T](self: NDArray[T]): NDArray[T] =
+    ## make an array of indices into the underlying 1d sequence
+    ## this is just a copy from the iterator indices1d
+    result.init(self.size)
+
+    for i in indices1d(self):
+        result[i] = i
+
+iterator izip1d[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a, b: int] {.inline.} =
+    ## iterator to return 1-d indices into two arrays together
+    ## this is stride and order aware
+    ##
+    ## this is not user-facing because the underlying 1-d sequence
+    ## is not user facing
+
+    ensure_compatible_dims(a1, a2)
+
+    let L = len(a1)
+
+    if a1.order == a2.order:
+        var i = 0
+        while i < L:
+            yield (i, i)
+            inc(i)
+
+            assert(len(a1) == L, "array modified while iterating over it")
+            assert(len(a2) == L, "array modified while iterating over it")
+
+    else:
+
+        var
+          i1 = 0
+          i2 = 0
+          current_indices=newSeq[int]( a1.ndim )
+
+        while i1 < (a1.size-1):
+
+            i1=0
+            i2=0
+            for idim in 0..<a1.ndim:
+                i1 += current_indices[idim]*a1.strides[idim]
+                i2 += current_indices[idim]*a2.strides[idim]
+
+            yield (i1, i2)
+
+            assert(len(a1) == L, "array modified while iterating over it")
+            assert(len(a2) == L, "array modified while iterating over it")
+
+            for idim in countdown(a1.ndim-1,0):
+                if current_indices[idim] == (a1.dims[idim]-1):
+                    # reset this dim but continue to the next earliest
+                    current_indices[idim] = 0
+                else:
+                    current_indices[idim] += 1
+                    break
+
+
+iterator izip1d[S, T, U](a1: NDArray[S], a2: NDArray[T], a3: NDArray[U]): tuple[a,b,c: int] {.inline.} =
+    ## iterator to return 1-d indices into three arrays together
+    ## this is stride and order aware
+    ##
+    ## this is not user-facing because the underlying 1-d sequence
+    ## is not user facing
+
+    ensure_compatible_dims(a1, a2)
+    ensure_compatible_dims(a1, a3)
+
+    let L = len(a1)
+
+    if a1.order == a2.order and a1.order == a3.order:
+        var i = 0
+        while i < L:
+            yield (i, i, i)
+            inc(i)
+
+            assert(len(a1) == L, "array modified while iterating over it")
+            assert(len(a2) == L, "array modified while iterating over it")
+            assert(len(a3) == L, "array modified while iterating over it")
+
+    else:
+
+        var
+          i1 = 0
+          i2 = 0
+          i3 = 0
+          current_indices=newSeq[int]( a1.ndim )
+
+        while i1 < (a1.size-1):
+
+            i1=0
+            i2=0
+            i3=0
+            for idim in 0..<a1.ndim:
+                i1 += current_indices[idim]*a1.strides[idim]
+                i2 += current_indices[idim]*a2.strides[idim]
+                i3 += current_indices[idim]*a3.strides[idim]
+
+            yield (i1, i2, i3)
+
+            assert(len(a1) == L, "array modified while iterating over it")
+            assert(len(a2) == L, "array modified while iterating over it")
+            assert(len(a3) == L, "array modified while iterating over it")
+
+            for idim in countdown(a1.ndim-1,0):
+                if current_indices[idim] == (a1.dims[idim]-1):
+                    # reset this dim but continue to the next earliest
+                    current_indices[idim] = 0
+                else:
+                    current_indices[idim] += 1
+                    break
+
 
 
 #
@@ -146,6 +298,7 @@ proc shareData*[T](a: NDArray[T]): NDArray[T] =
 
 proc strings*(dims: varargs[int]): NDArray[string] =
     ## get a new array filled with empty strings
+    ## do not use zeros[string], as it fills with nil
     result.init(dims)
 
     for i in 0..<result.len:
@@ -163,7 +316,7 @@ proc ones*[T](dims: varargs[int]): NDArray[T] =
         result.data[i] = T(1)
 
 proc replicate*[T](val: T, dims: varargs[int]): NDArray[T] =
-    ## get a new array filled with ones
+    ## get a new array filled with the specified value
     result.init(dims)
 
     for i in 0..<result.size:
@@ -265,13 +418,13 @@ proc reshape*[T](self: NDArray[T], dims: varargs[int]): NDArray[T] =
     shallowCopy(result.data, self.data)
 
 proc reverse[T](self: seq[T]): seq[T] =
+    ## get a new copy of the input sequence, reversed
     newSeq(result, self.len)
 
     for i in 0..<self.len:
         let irev = (self.len-1) - i
 
         result[irev] = self[i]
-
 
 proc transpose*[T](self: NDArray[T]): NDArray[T] =
     ## get an array that shares the underlying data with the
@@ -293,6 +446,7 @@ proc transpose*[T](self: NDArray[T]): NDArray[T] =
 
 proc sum*[T](self: NDArray[T]): T {.inline.} =
     ## sum over elements in the array
+    ## TODO: implement summing over specified dimensions/axes
     self.data.sum()
 
 proc cumsum*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
@@ -341,92 +495,6 @@ proc cumprod*[T](self: NDArray[T]): NDArray[T] {.inline.} =
     ## cumulative product over elements in the array
     result.init(self.dims)
     cumprod(self, result)
-
-
-#
-# private iterators for stride and order aware access
-# to the underlying private sequence
-#
-
-iterator indices1d[T](self: NDArray[T]): int {.inline.} =
-    ## iterator for the 1-d indices into an array
-
-    let L = len(self)
-
-    if self.order == rowMajor:
-        # fast version
-        var i=0
-        while i < self.size:
-            yield i
-            inc(i)
-            assert(len(self) == L, "seq modified while iterating over it")
-    else:
-        var i = 0
-
-        var current_indices=newSeq[int]( self.ndim )
-        while i < (self.size-1):
-
-            i=0
-            for idim in 0..<self.ndim:
-                i += current_indices[idim]*self.strides[idim]
-            yield i
-            assert(len(self) == L, "seq modified while iterating over it")
-
-            for idim in countdown(self.ndim-1,0):
-                if current_indices[idim] == (self.dims[idim]-1):
-                    # reset this dim but continue to the next earliest
-                    current_indices[idim] = 0
-                else:
-                    current_indices[idim] += 1
-                    break
-
-iterator izip1d[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a, b: int] {.inline.} =
-    ## iterator to return 1-d indices into two arrays together
-    ## this is stride and order aware
-    ##
-    ## this is not user-facing because the underlying 1-d sequence
-    ## is not user facing
-
-    ensure_compatible_dims(a1, a2)
-
-    let L = len(a1)
-
-    if a1.order == a2.order:
-        var i = 0
-        while i < L:
-            yield (i, i)
-            inc(i)
-
-            assert(len(a1) == L, "array modified while iterating over it")
-            assert(len(a2) == L, "array modified while iterating over it")
-
-    else:
-
-        var
-          i1 = 0
-          i2 = 0
-          current_indices=newSeq[int]( a1.ndim )
-
-        while i1 < (a1.size-1):
-
-            i1=0
-            i2=0
-            for idim in 0..<a1.ndim:
-                i1 += current_indices[idim]*a1.strides[idim]
-                i2 += current_indices[idim]*a2.strides[idim]
-
-            yield (i1, i2)
-
-            assert(len(a1) == L, "array modified while iterating over it")
-            assert(len(a2) == L, "array modified while iterating over it")
-
-            for idim in countdown(a1.ndim-1,0):
-                if current_indices[idim] == (a1.dims[idim]-1):
-                    # reset this dim but continue to the next earliest
-                    current_indices[idim] = 0
-                else:
-                    current_indices[idim] += 1
-                    break
 
 
 # TODO: also need to check contiguous for fast one, when
@@ -671,7 +739,7 @@ proc `/`*[T,T2](val: T2, self: NDArray[T]): NDArray[T] {.inline.} =
 #
 #
 
-# in place operations
+# in place operations between arrays
 
 MakeInplaceOpSpecial(`.=`,`=`)
 MakeInplaceOp(`+=`)
@@ -679,12 +747,11 @@ MakeInplaceOp(`-=`)
 MakeInplaceOp(`*=`)
 MakeInplaceOp(`/=`)
 
-# making new arrays
+# operations that make new arrays
 #
 # currently demand the arrays are of the same type until
 # we can implement promotions restrictions
 # otherwise, there is no clear way to choose the output type
-# other than by order in the expression
 
 
 # unary
@@ -733,16 +800,34 @@ template makeUFunc*(fname: expr) =
     proc fname*[T](self: NDArray[T]): NDArray[T] {.inline.} =
         result.init(self.dims)
 
-        for i in 0..self.size-1:
-            result.data[i] = fname(self.data[i])
+        for ires, iself in izip1d(result, self):
+            result.data[ires] = fname(self.data[iself])
 
     # copying into an existing array
     proc fname*[T](self: NDArray[T], output: var NDArray[T]) {.inline.} =
 
         ensure_compatible_dims(self, output)
 
-        for i in 0..self.size-1:
-            output.data[i] = fname(self.data[i])
+        for iout, iself in izip1d(output, self):
+            output.data[iout] = fname(self.data[iself])
+
+# two arguments
+template makeUFunc2*(fname: expr) =
+    # creating a new array
+    proc fname*[T](a1, a2: NDArray[T]): NDArray[T] {.inline.} =
+        result.init(a1.dims)
+
+        for ires, i1, i2 in izip1d(result, a1, a2):
+            result.data[ires] = fname(a1.data[i1], a2.data[i2])
+
+    # copying into an existing array
+    proc fname*[T](a1, a2: NDArray[T], output: var NDArray[T]) {.inline.} =
+
+        ensure_compatible_dims(a1, output)
+
+        for iout, i1, i2 in izip1d(output, a1, a2):
+            output.data[iout] = fname(a1.data[i1], a2.data[i2])
+
 
 makeUFunc(exp)
 makeUFunc(ln)
@@ -777,6 +862,9 @@ makeUFunc(round)
 makeUFunc(deg2rad)
 makeUFunc(rad2deg)
 
+makeUFunc2(arctan2)
+makeUFunc2(hypot)
+makeUFunc2(fmod)
 
 #makeUFunc[float](exp)
 #proc exp*[T](self: NDArray[T]): NDArray[T] {.inline.} =
@@ -786,7 +874,7 @@ makeUFunc(rad2deg)
 #        result.data[i] = exp(self.data[i])
 
 proc `$`*[T](self: NDArray[T]): string =
-
+    ## TODO support structured print for dimensions other than 2
     if self.ndim==2:
         var lines = newSeq[string]()
 
