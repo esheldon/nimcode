@@ -1,5 +1,6 @@
 import ndarray
 import strutils
+import math
 
 when isMainModule:
 
@@ -49,6 +50,15 @@ when isMainModule:
     let at2 = arctan2(oa, oa)
     echo("\nat2:")
     echo(at2)
+
+    let g=ndarray.fromSeq(@[0.3, 0.25, 0.1])
+    let eta = 2.0*arctanh(g)
+    let e = tanh(eta)
+
+    echo("g:       ",g)
+    echo("eta:     ",eta)
+    echo("e:       ",e)
+    echo("inverse: ",arctanh(e))
 
     var expones = exp(oa)
     echo("\nexp(oa):")
@@ -224,29 +234,34 @@ when isMainModule:
     echo("darr zero: ",darr)
 
     var xfirst = ones[float](3)
-    let xsecond = ones[float](3)
+    var xsecond = ones[float](3)
+
+
+    xfirst[2] = 3
 
     echo("\n")
     echo(xfirst)
     echo(xsecond)
 
-    xfirst[2] = 3
+    echo(".== : ", xfirst .== xsecond)
+    echo(".!= : ", xfirst .!= xsecond)
+    echo(".<  : ", xfirst .< xsecond )
+    echo(".<= : ", xfirst .<= xsecond )
+    echo(".>  : ", xfirst .> xsecond )
+    echo(".>= : ", xfirst .>= xsecond )
 
-    let teqtest = (xfirst == xsecond)
-    echo("== : ", xfirst == xsecond)
-    echo("!= : ", not (xfirst == xsecond) )
-    echo("<  : ", xfirst < xsecond )
-    echo("<= : ", xfirst <= xsecond )
+    echo("< 2.0 : ", xfirst .< 2.0)
+    echo("2.0 > : ", 2.0 .> xfirst)
+    echo("> 2.0 : ", xfirst .> 2.0)
+    echo("2.0 < : ", 2.0 .< xfirst)
 
-    echo("< 100.0 : ", xfirst < 100.0)
-    echo("100.0 > : ", 100.0 > xfirst)
+    echo("2.0 < x < 4.0      : ", xfirst .> 2.0 and xfirst .< 4.0)
+    echo("between(x,2.0,4.0) : ", between(xfirst, 2.0, 4.0))
 
-    echo("2.0 < x < 4.0 : ", xfirst > 2.0 and xfirst < 4.0)
     #let test = any(xfirst > 2.0 and xfirst < 4.0)
     #echo("test:",test)
-    echo("anytrue(2.0 < x < 4.0) : ",anytrue(xfirst > 2.0 and xfirst < 4.0))
-    echo("alltrue(2.0 < x < 4.0) : ",alltrue(xfirst > 2.0 and xfirst < 4.0))
+    echo("anytrue(2.0 < x < 4.0) : ",anytrue(xfirst .> 2.0 and xfirst .< 4.0))
+    echo("alltrue(2.0 < x < 4.0) : ",alltrue(xfirst .> 2.0 and xfirst .< 4.0))
 
     echo("any: ", any(xfirst, proc(x: float): bool = return x > 2.0 and x < 4.0))
     echo("all: ", all(xfirst, proc(x: float): bool = return x > 2.0 and x < 4.0))
-

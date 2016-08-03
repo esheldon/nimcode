@@ -47,7 +47,6 @@ type
         data: seq[T]           # use 1-D sequence as backing
 
 
-
 proc ensure_compatible_dims[T1,T2](a1: NDArray[T1], a2: NDArray[T2]) =
     ## private proc to check dimensions are compatible
     if a1.ndim != a2.ndim:
@@ -533,25 +532,12 @@ iterator zip*[S, T](a1: NDArray[S], a2: NDArray[T]): tuple[a: S, b: T] {.inline.
         yield (a1.data[i1], a2.data[i2])
 
 
-
-template MakeCompareOpSpecial(opname: expr, op: expr) =
-    proc opname*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
-        ensure_compatible_dims(a1, a2)
-
-        result.init(a1.dims)
-
-        for ires, i1, i2 in izip1d(result, a1, a2):
-            result.data[ires] = op(a1.data[i1], a2.data[i2])
-
-
-
 #
 # getters
 #
 
 # specific dimensions for speed; unrolling the loop
-# to get the index.  I haven't tested how much faster
-# these are
+# to get the index.
 
 proc `[]`*[T](self: NDArray[T], i: int): T {.inline.} =
     if self.ndim != 1:
@@ -846,67 +832,59 @@ template MakeBooleanOp(op: expr) =
             result.data[ires] = op(a1.data[i1], a2.data[i2])
 
 
-template MakeCompareOp(op: expr) =
+template MakeCompareOp(op: expr, sop: expr) =
     proc op*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
         ensure_compatible_dims(a1, a2)
 
         result.init(a1.dims)
 
         for ires, i1, i2 in izip1d(result, a1, a2):
-            result.data[ires] = op(a1.data[i1], a2.data[i2])
+            result.data[ires] = sop(a1.data[i1], a2.data[i2])
 
-template MakeCompareOpScalar(op: expr) =
+template MakeCompareOpScalar(op: expr, sop: expr) =
     proc op*[S, T](self: NDArray[S], val: T): NDArray[bool] =
         result.init(self.dims)
 
         for ires, iself in izip1d(result, self):
-            result.data[ires] = op(self.data[iself], val)
+            result.data[ires] = sop(self.data[iself], val)
 
     proc op*[S, T](val: T, self: NDArray[S]): NDArray[bool] =
         result.init(self.dims)
 
         for ires, iself in izip1d(result, self):
-            result.data[ires] = op(val, self.data[iself])
+            result.data[ires] = sop(val, self.data[iself])
 
 
 
-# the template defined ones are not working
-# see system.nim
 MakeBooleanUniOp(`not`)
 
 MakeBooleanOp(`and`)
 MakeBooleanOp(`or`)
 MakeBooleanOp(`xor`)
 
-MakeCompareOp(`==`)
-MakeCompareOpScalar(`==`)
-#MakeCompareOp(`!=`)
-#MakeCompareOpScalar(`!=`)
-MakeCompareOp(`<`)
-MakeCompareOpScalar(`<`)
-MakeCompareOp(`<=`)
-MakeCompareOpScalar(`<=`)
-#MakeCompareOp(`>`)
-#MakeCompareOpScalar(`>`)
-#MakeCompareOp(`>=`)
-#MakeCompareOpScalar(`>=`)
+# because !=, >, and >= are immediate templates in system.nim
+# we cannot override them.  So we adopt .!= etc. for *all*
+# comparision operators
+MakeCompareOp(`.==`,`==`)
+MakeCompareOp(`.!=`,`!=`)
+MakeCompareOp(`.<`,`<`)
+MakeCompareOp(`.<=`,`<=`)
+MakeCompareOp(`.>`,`>`)
+MakeCompareOp(`.>=`,`>=`)
 
-#proc `!=`*[S, T](a1: NDArray[S], a2: NDArray[T]): NDArray[bool] =
-#    ensure_compatible_dims(a1, a2)
+MakeCompareOpScalar(`.==`,`==`)
+MakeCompareOpScalar(`.!=`,`!=`)
+MakeCompareOpScalar(`.<`,`<`)
+MakeCompareOpScalar(`.<=`,`<=`)
+MakeCompareOpScalar(`.>`,`>`)
+MakeCompareOpScalar(`.>=`,`>=`)
 
-#    result.init(a1.dims)
+proc between*[S, T](self: NDArray[S], lo, hi: T): NDArray[bool] =
+    result.init(self.dims)
 
-#    for ires, i1, i2 in izip1d(result, a1, a2):
-#        result.data[ires] = not (a1.data[i1] == a2.data[i2])
-
-#proc `!=`*[T](a1, a2: NDArray[T]): NDArray[bool] =
-#    ensure_compatible_dims(a1, a2)
-
-#    result.init(a1.dims)
-
-#    for ires, i1, i2 in izip1d(result, a1, a2):
-#        result.data[ires] = not (a1.data[i1] == a2.data[i2])
-
+    for ires, iself in izip1d(result, self):
+        let val=self.data[iself]
+        result.data[ires] = val >= lo and val <= hi
 
 proc alltrue *(self: NDArray[bool]): bool =
     ## returns true if all elements of the input boolean
@@ -1003,6 +981,12 @@ template makeUFunc2*(fname: expr) =
         for iout, i1, i2 in izip1d(output, a1, a2):
             output.data[iout] = fname(a1.data[i1], a2.data[i2])
 
+proc arctanh(x: float): float {.importc: "atanh", header: "<math.h>".}
+proc arctanh(x: float32): float32 {.importc: "atanhf", header: "<math.h>".}
+proc arcsinh(x: float): float {.importc: "asinh", header: "<math.h>".}
+proc arcsinh(x: float32): float32 {.importc: "asinhf", header: "<math.h>".}
+proc arccosh(x: float): float {.importc: "acosh", header: "<math.h>".}
+proc arccosh(x: float32): float32 {.importc: "acoshf", header: "<math.h>".}
 
 makeUFunc(exp)
 makeUFunc(ln)
@@ -1015,13 +999,15 @@ makeUFunc(sin)
 makeUFunc(cos)
 makeUFunc(sinh)
 makeUFunc(cosh)
-
 makeUFunc(tan)
 makeUFunc(tanh)
 
-makeUFunc(arccos)
 makeUFunc(arcsin)
+makeUFunc(arccos)
+makeUFunc(arcsinh)
+makeUFunc(arccosh)
 makeUFunc(arctan)
+makeUFunc(arctanh)
 
 makeUFunc(erf)
 makeUFunc(erfc)
