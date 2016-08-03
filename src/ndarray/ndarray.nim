@@ -18,6 +18,9 @@
 #    ? allow strides that are by byte rather than by count
 #        - this would faciliate things similar to numpy record arrays
 #        - would require casting the data
+#    - add div (integer division)
+#    - add mod, integer modulo operation
+#    - add shifts for integers
 
 import strutils
 import math
